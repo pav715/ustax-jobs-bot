@@ -151,9 +151,8 @@ def format_job(job):
         loc_str = loc
 
     lines = [
-        "🔥 *Job Opportunity*",
+        f"🔥 *Job Opportunity at {company}*",
         "",
-        f"🏢 *Company:* {company}",
         f"💼 *Role:* {title}",
         f"📍 *Location:* {loc_str}",
         f"🎓 *Qualification:* {qual}",
@@ -191,14 +190,5 @@ def send_startup_message(keyword_count, location_count):
         f"⏱ Checks every *{config.CHECK_INTERVAL_MINUTES} minutes*\n"
         "📬 New jobs posted here instantly — newest first, no duplicates\n\n"
         f"🕐 {datetime.now().strftime('%d %b %Y %H:%M')}"
-    )
-    _post(msg)
-
-
-def send_no_jobs_today_message():
-    msg = (
-        "📭 *No new US Tax jobs found so far today.*\n\n"
-        "I will keep monitoring job boards and company sites.\n"
-        f"⏱ Last checked: {datetime.now().strftime('%d %b %Y %H:%M')}"
     )
     _post(msg)
