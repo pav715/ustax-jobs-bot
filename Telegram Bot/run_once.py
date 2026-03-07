@@ -110,12 +110,6 @@ def main():
         log("ERROR: CHAT_ID not set.")
         return
 
-    # SEED_MODE: mark all current jobs as seen WITHOUT sending
-    # Used once to reset the baseline so only future NEW jobs are sent
-    seed_mode = os.environ.get("SEED_MODE", "false").lower() == "true"
-    if seed_mode:
-        log("SEED MODE — marking all current jobs as seen (no messages sent).")
-
     seen = load_seen()
     log(f"Loaded {len(seen)} previously seen jobs.")
 
@@ -129,11 +123,16 @@ def main():
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total fetched.")
 
-    if seed_mode:
+    # AUTO SEED: If this is the very first run (seen is empty),
+    # mark everything as seen without sending — establishes baseline.
+    # From next run onwards only genuinely NEW jobs are sent.
+    if len(seen) == 0 and len(us_tax_jobs) > 0:
+        log("First run detected — seeding baseline. Marking all current jobs as seen (no messages sent).")
+        log("From next cycle onwards only NEW jobs will be sent to Telegram.")
         for job in us_tax_jobs:
             seen.add(job["id"])
         save_seen(seen)
-        log(f"SEED DONE — marked {len(us_tax_jobs)} jobs as seen. Bot will only send NEW jobs from now.")
+        log(f"Baseline set with {len(seen)} jobs. Bot is now ready.")
         return
 
     # Filter: not seen before
@@ -141,7 +140,7 @@ def main():
     log(f"New (not sent before): {len(new_jobs)}")
 
     if not new_jobs:
-        log("No new US Tax jobs found this cycle.")
+        log("No new US Tax jobs this cycle.")
         save_seen(seen)
         return
 
