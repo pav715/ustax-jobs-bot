@@ -30,13 +30,7 @@ PRIORITY_KEYWORDS = [
     "Tax Analyst",
     "Tax Compliance",
     "Tax Preparation",
-    "Tax Preparation 1040",
     "Tax Consultant",
-    "US Income Tax",
-    "Direct Tax",
-    "IRS Regulations",
-    "Tax Software Specialist",
-    "Tax E-Filing Compliance",
 ]
 
 # Tax-related match pattern for filtering career site links
@@ -53,7 +47,7 @@ def job_id(url, title, company):
 
 
 def _delay():
-    time.sleep(random.uniform(0.4, 1.0))
+    time.sleep(random.uniform(2.5, 4.0))
 
 
 def _log(source, keyword, location, count):
@@ -87,11 +81,13 @@ def scrape_naukri(keyword, location):
             f"&src=jobsearchDesk&latLong="
         )
         r = SESSION.get(url, headers={
-            **dict(SESSION.headers),
-            "appid":    "109",
-            "systemid": "109",
-            "Referer":  "https://www.naukri.com/",
-            "Accept":   "application/json",
+            "User-Agent":   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "appid":        "109",
+            "systemid":     "109",
+            "Referer":      "https://www.naukri.com/",
+            "Accept":       "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Origin":       "https://www.naukri.com",
         }, timeout=12)
 
         if r.status_code != 200:
