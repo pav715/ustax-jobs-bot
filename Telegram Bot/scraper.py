@@ -348,43 +348,15 @@ def fetch_all_jobs():
                 seen_urls.add(key)
                 all_jobs.append(job)
 
-    # LinkedIn
+    # LinkedIn — works on cloud, no blocking
     print("\n[LinkedIn] Scanning all keywords × locations...")
     for kw in PRIORITY_KEYWORDS:
         for loc in config.LOCATIONS:
             add(scrape_linkedin(kw, loc))
             _delay()
 
-    # Naukri
-    print("\n[Naukri] Scanning all keywords × locations...")
-    for kw in PRIORITY_KEYWORDS:
-        for loc in config.LOCATIONS:
-            add(scrape_naukri(kw, loc))
-            _delay()
-
-    # Indeed
-    print("\n[Indeed] Scanning all keywords × locations...")
-    for kw in PRIORITY_KEYWORDS:
-        for loc in config.LOCATIONS:
-            add(scrape_indeed(kw, loc))
-            _delay()
-
-    # Google Jobs — top 5 keywords × top 3 locations
-    print("\n[Google Jobs] Scanning...")
-    for kw in PRIORITY_KEYWORDS[:5]:
-        for loc in config.LOCATIONS[:3]:
-            add(scrape_google_jobs(kw, loc))
-            _delay()
-
-    # Glassdoor — limited (heavy bot protection)
-    print("\n[Glassdoor] Scanning (limited)...")
-    for kw in PRIORITY_KEYWORDS[:3]:
-        for loc in config.LOCATIONS[:3]:
-            add(scrape_glassdoor(kw, loc))
-            _delay()
-
-    # Company career sites
-    print(f"\n[Company Sites] Scanning {len(getattr(config, 'COMPANY_SITES', []))} companies...")
+    # Company career sites — only scrape, skip Naukri/Indeed/Glassdoor (block cloud IPs)
+    print(f"\n[Company Sites] Scanning companies...")
     add(scrape_company_sites())
 
     # Sort newest first
