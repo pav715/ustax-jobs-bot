@@ -12,34 +12,69 @@ from sender import send_job
 
 SEEN_FILE = "seen_jobs.json"
 
-# ── US Tax relevance filter ───────────────────────────────────────────
-# Job title or description must match at least one of these
-US_TAX_FILTER = re.compile(
+# ── US Tax keywords — job title OR description must contain at least one ──
+US_TAX_TERMS = re.compile(
     r"\b("
-    r"us\s*tax|us\s*taxation|u\.s\.?\s*tax|united\s*states\s*tax|"
-    r"1040|1041|1120|1065|990|5500|"
-    r"irs|federal\s*tax|state\s*tax|"
-    r"us\s*income\s*tax|fiduciary\s*tax|partnership\s*tax|"
-    r"tax\s*prep(arer|aration)|"
-    r"tax\s*software|tax\s*e.?fil|e.?filing\s*tax|"
+    # US Tax identity
+    r"us\s*tax(ation)?|u\.s\.?\s*tax|united\s*states\s*tax|"
+    r"us\s*income\s*tax|us\s*federal\s*tax|"
+
+    # Federal tax forms
+    r"1040|1041|1120|1065|990|5500|1099|W-2|W2|"
+    r"form\s*10(40|41|20|65|99)|"
+    r"schedule\s*[A-F]|"
+
+    # IRS / Federal / State
+    r"irs|internal\s*revenue|federal\s*tax|state\s*tax\s*returns?|"
+    r"federal\s*returns?|state\s*filing|"
+
+    # Tax types
+    r"individual\s*tax(ation)?|corporate\s*tax(ation)?|"
+    r"fiduciary\s*tax(ation)?|partnership\s*tax(ation)?|"
+    r"tax\s*prep(arer|aration)|tax\s*e.?fil|"
     r"tax\s*compliance|tax\s*analyst|tax\s*consultant|"
-    r"tax\s*reviewer|tax\s*advisor|tax\s*associate|"
-    r"direct\s*tax|indirect\s*tax|"
-    r"tax\s*forms?|tax\s*returns?|"
-    r"tax\s*schema|tax\s*business\s*rules|"
-    r"form\s*10(40|41|20|65)|"
-    r"tax\s*sme|tax\s*subject\s*matter"
+    r"tax\s*reviewer|tax\s*associate|tax\s*advisor|"
+    r"tax\s*software|tax\s*schema|tax\s*business\s*rules|"
+    r"tax\s*sme|tax\s*subject\s*matter|"
+    r"direct\s*tax|tax\s*returns?"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# ── Hard blocklist — always reject these ─────────────────────────────
+BLOCKLIST = re.compile(
+    r"\b("
+    r"recruiter|recruitment|talent\s*acquisition|bench\s*sales|"
+    r"us\s*it\s*recruiter|it\s*recruiter|"
+    r"software\s*engineer(?!\s*tax)|software\s*developer(?!\s*tax)|"
+    r"selenium|automation\s*tester|manual\s*tester|"
+    r"\bgst\b|\bvat\b|goods\s*and\s*services\s*tax|"
+    r"payroll(?!\s*tax)|accounts\s*payable|accounts\s*receivable|"
+    r"statutory\s*audit|business\s*development|sales\s*executive"
     r")\b",
     re.IGNORECASE,
 )
 
 
 def is_us_tax_job(job):
-    """Return True if job is US Tax related."""
+    """
+    Allow job only if:
+    1. Title OR description contains a US Tax term (form names, IRS, federal, etc.)
+    2. Title does NOT match the hard blocklist
+    """
     title = job.get("title", "")
     desc  = job.get("description", "")
-    check = f"{title} {desc}"
-    return bool(US_TAX_FILTER.search(check))
+    full  = f"{title} {desc}"
+
+    # Must contain at least one US Tax term anywhere in title or description
+    if not US_TAX_TERMS.search(full):
+        return False
+
+    # Reject if title contains blocked terms
+    if BLOCKLIST.search(title):
+        return False
+
+    return True
 
 
 def load_seen():
@@ -75,6 +110,12 @@ def main():
         log("ERROR: CHAT_ID not set.")
         return
 
+    # SEED_MODE: mark all current jobs as seen WITHOUT sending
+    # Used once to reset the baseline so only future NEW jobs are sent
+    seed_mode = os.environ.get("SEED_MODE", "false").lower() == "true"
+    if seed_mode:
+        log("SEED MODE — marking all current jobs as seen (no messages sent).")
+
     seen = load_seen()
     log(f"Loaded {len(seen)} previously seen jobs.")
 
@@ -87,6 +128,13 @@ def main():
     # Filter: US Tax relevant only
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total fetched.")
+
+    if seed_mode:
+        for job in us_tax_jobs:
+            seen.add(job["id"])
+        save_seen(seen)
+        log(f"SEED DONE — marked {len(us_tax_jobs)} jobs as seen. Bot will only send NEW jobs from now.")
+        return
 
     # Filter: not seen before
     new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]
