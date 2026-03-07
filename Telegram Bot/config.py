@@ -67,13 +67,9 @@ LOCATIONS = [
     "Hyderabad",
     "Bangalore",
     "Bengaluru",
-    "Pune",
-    "Ahmedabad",
-    "Gujarat",
-    "Kerala",
-    "Mumbai",
     "Chennai",
     "Tamil Nadu",
+    "Kerala",
     "Remote",
 ]
 

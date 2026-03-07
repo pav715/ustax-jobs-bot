@@ -32,61 +32,73 @@ def _post(text):
 
 
 def _responsibilities(title, desc):
-    """Pick role-specific bullet points based on job title."""
+    """Extract from actual job description first, fall back to role-based defaults."""
     t = title.lower()
 
-    if desc:
-        sents = [s.strip() for s in re.split(r'[.\n•\-]', desc) if len(s.strip()) > 25]
-        if len(sents) >= 4:
+    # Use actual job description if it has enough content
+    if desc and len(desc) > 80:
+        # Split by sentence endings, bullets, newlines
+        sents = [s.strip() for s in re.split(r'[.\n•\|\-–]', desc) if len(s.strip()) > 30]
+        # Filter out noise (very short fragments, just dates, just numbers)
+        sents = [s for s in sents if not re.match(r'^[\d\s,/-]+$', s)]
+        if len(sents) >= 3:
             return sents[:5]
 
-    # Role-based defaults
+    # Role-based defaults when no description available
     if any(x in t for x in ["qa", "quality", "e-file", "efile", "testing"]):
         return [
             "Perform QA testing for US tax software (1040, 1041, 1065, 1120 forms)",
-            "Test tax calculations and validate software outputs",
-            "Identify and report bugs/issues and coordinate with developers",
+            "Test tax calculations and validate software outputs against IRS rules",
+            "Identify and report bugs, coordinate fixes with development teams",
             "Create test scenarios and support e-file approvals with US state agencies",
             "Ensure tax products meet compliance and quality standards",
         ]
     elif any(x in t for x in ["preparer", "preparation"]):
         return [
-            "Prepare and file US individual/business tax returns (1040, 1041, 1065, 1120)",
-            "Collect and organize financial information from clients",
+            "Prepare and review US individual/business tax returns (1040, 1041, 1065, 1120)",
+            "Collect and organize client financial data for accurate tax filing",
             "Ensure all returns comply with US federal and state tax laws",
-            "Provide strategic tax advice to minimize liabilities and maximize refunds",
-            "Maintain detailed records of all tax filings and client interactions",
+            "Research tax issues and advise on minimizing liabilities",
+            "Maintain records of all filings and track deadlines",
         ]
     elif any(x in t for x in ["analyst", "compliance", "regulatory"]):
         return [
-            "Monitor US federal and state tax regulations for software impact",
-            "Analyze and implement tax regulatory changes into software",
-            "Prepare and submit ATS test scenarios to US state authorities",
-            "Coordinate with development teams to align with government requirements",
-            "Support users and clients on regulatory updates and tax filings",
+            "Analyze US federal and state tax law changes and assess software impact",
+            "Prepare and submit ATS test scenarios to US state tax authorities",
+            "Coordinate with development teams to implement regulatory updates",
+            "Monitor IRS and state agency announcements for form and rule changes",
+            "Support clients and internal teams on US tax compliance matters",
         ]
     elif any(x in t for x in ["programmer", "developer", "software", "filing"]):
         return [
-            "Develop and maintain US state/federal tax form software",
-            "Analyze EF schema changes and create test scenarios for print/e-file",
-            "Liaise with government agencies to obtain form approvals annually",
-            "Troubleshoot and resolve bugs in production tax software",
-            "Update and maintain XML schemas and business rules for tax compliance",
+            "Develop and maintain US federal/state tax form software modules",
+            "Analyze EF schema and business rule changes for print and e-file",
+            "Liaise with government agencies to obtain annual form approvals",
+            "Troubleshoot and resolve production issues in tax software",
+            "Update XML schemas and business rules for compliance",
         ]
     elif any(x in t for x in ["manager", "senior", "lead"]):
         return [
-            "Lead a team of tax analysts and QA specialists",
-            "Oversee US tax compliance and regulatory filing processes",
-            "Review and approve tax returns and software test cases",
-            "Build relationships with US state tax authorities",
-            "Drive process improvements and best practices in tax operations",
+            "Lead and mentor a team of tax analysts and QA professionals",
+            "Oversee US tax compliance, regulatory filing, and software processes",
+            "Review and approve tax returns, test cases, and regulatory submissions",
+            "Build and maintain relationships with US state tax authorities",
+            "Drive continuous improvement in tax operations and processes",
+        ]
+    elif any(x in t for x in ["reviewer", "review"]):
+        return [
+            "Review US individual and business tax returns for accuracy (1040, 1041, 1120, 1065)",
+            "Identify errors, discrepancies, and compliance issues in tax filings",
+            "Provide feedback and guidance to tax preparers",
+            "Ensure returns meet IRS and state filing requirements",
+            "Maintain quality standards across all reviewed returns",
         ]
     else:
         return [
             "Handle US tax preparation and compliance activities",
             "Review and validate tax returns (1040, 1041, 1065, 1120)",
-            "Ensure accurate and timely tax filings per US regulations",
-            "Maintain tax documentation and coordinate with stakeholders",
+            "Ensure accurate and timely filings per US federal and state regulations",
+            "Maintain tax documentation and coordinate with internal stakeholders",
             "Support e-file processes and government authority submissions",
         ]
 
