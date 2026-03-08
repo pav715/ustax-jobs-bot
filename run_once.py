@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, date
 import config
 from scraper import fetch_all_jobs, SESSION
-from sender import send_job, send_daily_summary, send_fail_alert
+from sender import send_job, send_daily_summary, send_fail_alert, send_and_pin_welcome
 
 # ── Gemini AI setup ───────────────────────────────────────────────────
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -93,7 +93,7 @@ def load_state():
                 return json.load(f)
         except Exception:
             pass
-    return {"paused": False, "last_update_id": 0, "last_run_at": ""}
+    return {"paused": False, "last_update_id": 0, "last_run_at": "", "welcome_pinned": False}
 
 
 def save_state(state):
@@ -149,7 +149,6 @@ def handle_commands(state, stats):
             text = msg.get("text", "").strip().lower()
             chat_id = str(msg.get("chat", {}).get("id", ""))
 
-            # Only respond to commands from our channel or from any admin chat
             if not chat_id:
                 continue
 
@@ -514,6 +513,14 @@ def main():
     # Load state and stats
     state = load_state()
     stats = load_stats()
+
+    # ── Pin welcome message once (first run only) ─────────────────────
+    if not state.get("welcome_pinned"):
+        log("Pinning welcome message for the first time...")
+        ok = send_and_pin_welcome()
+        if ok:
+            state["welcome_pinned"] = True
+            save_state(state)
 
     # Handle Telegram commands (/status, /pause, /resume, /top, /help)
     state = handle_commands(state, stats)
