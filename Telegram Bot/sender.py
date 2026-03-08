@@ -186,23 +186,6 @@ def format_job(job):
     if salary and salary.lower() not in ("not mentioned", ""):
         lines.append(f"💰 *Salary:* {_escape(salary)}")
 
-    # ── Resume Match Score ──────────────────────────────────────────────
-    score = job.get("_match_score")
-    if score is not None:
-        if score >= 80:
-            score_label = "🟢"
-        elif score >= 60:
-            score_label = "🟡"
-        else:
-            score_label = "🔴"
-        lines.append(f"\n{score_label} *Resume Match: {score}%*")
-
-        highlights = job.get("_match_highlights", [])
-        if highlights:
-            lines.append("📌 *Why it matches:*")
-            for h in highlights[:3]:
-                lines.append(f"  • {_escape(str(h))}")
-
     lines += [
         "",
         f"🔗 *Apply Here:*\n{url}",
