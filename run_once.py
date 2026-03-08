@@ -73,6 +73,35 @@ BLOCKLIST = re.compile(
     re.IGNORECASE,
 )
 
+# ── Location filter — India / Remote only ────────────────────────────
+USA_LOCATION = re.compile(
+    r"\b(usa|united\s*states?|u\.s\.a?\.?|"
+    r"new\s*york|california|texas|florida|illinois|washington\s*dc|"
+    r"massachusetts|new\s*jersey|georgia|ohio|virginia|pennsylvania|"
+    r"north\s*carolina|michigan|arizona|colorado|"
+    r"\bNY\b|\bCA\b|\bTX\b|\bFL\b|\bIL\b|\bNJ\b|\bGA\b|\bMA\b|"
+    r"\bOH\b|\bVA\b|\bPA\b|\bNC\b|\bMI\b|\bAZ\b|\bCO\b|\bDC\b)\b",
+    re.IGNORECASE,
+)
+
+INDIA_LOCATION_FILTER = re.compile(
+    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|"
+    r"delhi|gurugram|gurgaon|noida|kerala|tamil|remote|work\s*from\s*home",
+    re.IGNORECASE,
+)
+
+
+def is_india_job(job):
+    """Return True only if job is in India or Remote — never USA."""
+    loc = job.get("location", "")
+    if USA_LOCATION.search(loc):
+        return False
+    if INDIA_LOCATION_FILTER.search(loc):
+        return True
+    if not loc or loc.strip() in ("", "India / Remote", "India"):
+        return True
+    return True
+
 
 def is_us_tax_job(job):
     title = job.get("title", "")

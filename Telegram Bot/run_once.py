@@ -73,6 +73,34 @@ BLOCKLIST = re.compile(
     re.IGNORECASE,
 )
 
+# ── Location filter — India / Remote only ─────────────────────────────
+USA_LOCATION = re.compile(
+    r"\b(usa|united\s*states?|u\.s\.a?\.?|"
+    r"new\s*york|california|texas|florida|illinois|washington\s*dc|"
+    r"massachusetts|new\s*jersey|georgia|ohio|virginia|pennsylvania|"
+    r"north\s*carolina|michigan|arizona|colorado|"
+    r"\bNY\b|\bCA\b|\bTX\b|\bFL\b|\bIL\b|\bNJ\b|\bGA\b|\bMA\b|"
+    r"\bOH\b|\bVA\b|\bPA\b|\bNC\b|\bMI\b|\bAZ\b|\bCO\b|\bDC\b)\b",
+    re.IGNORECASE,
+)
+
+INDIA_LOCATION_FILTER = re.compile(
+    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|"
+    r"delhi|gurugram|gurgaon|noida|kerala|tamil|remote|work\s*from\s*home",
+    re.IGNORECASE,
+)
+
+
+def is_india_job(job):
+    """Return True only if job is in India or Remote — never USA."""
+    loc = job.get("location", "")
+    if USA_LOCATION.search(loc):
+        return False
+    if INDIA_LOCATION_FILTER.search(loc):
+        return True
+    # Empty/unknown location — accept (Workday India context)
+    return True
+
 
 def is_us_tax_job(job):
     title = job.get("title", "")
@@ -441,8 +469,30 @@ def main():
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
 
-    # No date filter — LinkedIn filters by since_seconds=86400, seen_jobs.json deduplicates
-    log(f"US Tax jobs ready to process: {len(us_tax_jobs)}")
+    # Filter: India / Remote only — drop any USA-located jobs
+    us_tax_jobs = [j for j in us_tax_jobs if is_india_job(j)]
+    log(f"India/Remote only: {len(us_tax_jobs)} jobs after location filter.")
+
+    # ── SEED MODE ─────────────────────────────────────────────────────────
+    # First run (seen_jobs.json empty) OR SEED_MODE=true from GitHub Actions:
+    # Mark all current jobs as seen WITHOUT sending any.
+    # This sets "right now" as baseline → next run sends only NEW jobs.
+    seed_mode = os.environ.get("SEED_MODE", "false").lower() == "true"
+    first_run  = (len(seen) == 0 and not state.get("first_run_done"))
+
+    if seed_mode or first_run:
+        reason = "SEED_MODE triggered" if seed_mode else "first run — fresh start"
+        log(f"Seeding ({reason}): marking {len(us_tax_jobs)} jobs as seen. Nothing sent.")
+        for j in us_tax_jobs:
+            seen.add(j["id"])
+        save_seen(seen)
+        state["first_run_done"] = True
+        save_state(state)
+        log("Seed complete. From NOW, only new jobs will be sent every 5 minutes.")
+        return
+
+    state["first_run_done"] = True
+    save_state(state)
 
     # New jobs only — sorted oldest-first so channel shows newest at top
     new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]

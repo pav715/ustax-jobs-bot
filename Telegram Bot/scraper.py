@@ -105,7 +105,7 @@ def scrape_linkedin(keyword, location, since_seconds=86400):
 
 # ── GOOGLE JOBS + GLASSDOOR via JobSpy ───────────────────────────────
 JOBSPY_KEYWORDS = ["US Tax", "Tax Analyst", "Tax Compliance", "US Taxation"]
-JOBSPY_LOCATIONS = ["Hyderabad India", "Bangalore India", "Chennai India"]
+JOBSPY_LOCATIONS = ["Hyderabad", "Bangalore", "Chennai"]
 
 
 def scrape_jobspy():
@@ -124,7 +124,7 @@ def scrape_jobspy():
         for location in JOBSPY_LOCATIONS:
             try:
                 results = scrape_jobs(
-                    site_name=["google", "glassdoor"],
+                    site_name=["google"],
                     search_term=keyword,
                     location=location,
                     results_wanted=10,
@@ -228,7 +228,13 @@ def scrape_indeed(keyword, location):
 # ── WORKDAY ATS (JSON API — clean & reliable) ─────────────────────────
 WORKDAY_SEARCH_KEYWORDS = ["US Tax", "1040"]
 INDIA_LOCATION = re.compile(
-    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|delhi|gurugram|remote",
+    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|delhi|gurugram|gurgaon|noida|remote",
+    re.IGNORECASE,
+)
+USA_LOCATION_WD = re.compile(
+    r"\b(usa|united\s*states?|u\.s\.a?\.?|new\s*york|california|texas|"
+    r"florida|illinois|new\s*jersey|georgia|ohio|virginia|pennsylvania|"
+    r"\bNY\b|\bCA\b|\bTX\b|\bFL\b|\bNJ\b|\bGA\b|\bOH\b|\bVA\b|\bPA\b)\b",
     re.IGNORECASE,
 )
 
@@ -271,7 +277,9 @@ def scrape_workday(company_name, tenant, career_path, wd_num=1):
                 ext_path = p.get("externalPath", "")
                 link     = f"{base_url}{ext_path}" if ext_path else ""
 
-                # Only India locations
+                # Only India / Remote — reject USA locations explicitly
+                if USA_LOCATION_WD.search(loc):
+                    continue
                 if loc and not INDIA_LOCATION.search(loc):
                     continue
 

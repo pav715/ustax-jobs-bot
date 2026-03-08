@@ -108,19 +108,19 @@ WORKDAY_COMPANIES = [
     {"name": "RSM",               "tenant": "rsm",             "path": "RSM_Careers",            "wd": 1},
     # ── IT / BPO (verified) ──
     {"name": "Accenture",         "tenant": "accenture",       "path": "AccentureCareers",       "wd": 103},
-    {"name": "Genpact",           "tenant": "genpact",         "path": "Genpact_Careers",        "wd": 1},
-    {"name": "Wipro",             "tenant": "wipro",           "path": "External",               "wd": 3},
-    {"name": "Mphasis",           "tenant": "mphasis",         "path": "Mphasis_Careers",        "wd": 1},
+    {"name": "Genpact",           "tenant": "genpact",         "path": "careers",                "wd": 1},
+    {"name": "Wipro",             "tenant": "wipro",           "path": "Wipro_Careers",          "wd": 3},
+    {"name": "Mphasis",           "tenant": "mphasis",         "path": "careers",                "wd": 1},
     # ── Financial Services — US captives with large India tax teams (verified) ──
     {"name": "Fidelity",          "tenant": "fmr",             "path": "FidelityCareers",        "wd": 1},
     {"name": "Northern Trust",    "tenant": "ntrs",            "path": "northerntrust",          "wd": 1},
     {"name": "Vanguard",          "tenant": "vanguard",        "path": "vanguard_external",      "wd": 5},
-    {"name": "BNY Mellon",        "tenant": "bnymellon",       "path": "Global",                 "wd": 1},
-    {"name": "State Street",      "tenant": "statestreet",     "path": "Global",                 "wd": 1},
+    {"name": "BNY Mellon",        "tenant": "bnymellon",       "path": "BNY_Mellon_Careers",     "wd": 1},
+    {"name": "State Street",      "tenant": "statestreet",     "path": "External",               "wd": 1},
     {"name": "Wells Fargo",       "tenant": "wellsfargo",      "path": "WellsFargoJobs",         "wd": 5},
-    {"name": "Citi",              "tenant": "citi",            "path": "Citi_Careers",           "wd": 5},
-    {"name": "BlackRock",         "tenant": "blackrock",       "path": "BlackRock",              "wd": 1},
-    {"name": "Morgan Stanley",    "tenant": "morganstanley",   "path": "morganstanley",          "wd": 1},
+    {"name": "Citi",              "tenant": "citi",            "path": "External",               "wd": 5},
+    {"name": "BlackRock",         "tenant": "blackrock",       "path": "Careers",                "wd": 1},
+    {"name": "Morgan Stanley",    "tenant": "morganstanley",   "path": "Careers",                "wd": 1},
     {"name": "Charles Schwab",    "tenant": "charlesschwab",   "path": "Careers",                "wd": 1},
 ]
 
