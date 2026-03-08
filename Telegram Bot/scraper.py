@@ -1,5 +1,5 @@
 """
-Job scraper — LinkedIn + Google Jobs + Glassdoor + Workday + Indeed + Naukri + India portals + company sites.
+Job scraper — LinkedIn + Google Jobs + Indeed + Naukri + India portals + company sites.
 """
 import requests
 import hashlib
@@ -103,9 +103,9 @@ def scrape_linkedin(keyword, location, since_seconds=86400):
     return jobs
 
 
-# ── GOOGLE JOBS + GLASSDOOR via JobSpy ───────────────────────────────
+# ── GOOGLE JOBS via JobSpy ────────────────────────────────────────────
 JOBSPY_KEYWORDS = ["US Tax", "Tax Analyst", "Tax Compliance", "US Taxation"]
-JOBSPY_LOCATIONS = ["Hyderabad India", "Bangalore India", "Chennai India"]
+JOBSPY_LOCATIONS = ["Hyderabad", "Bangalore", "Chennai"]
 
 
 def scrape_jobspy():
@@ -124,7 +124,7 @@ def scrape_jobspy():
         for location in JOBSPY_LOCATIONS:
             try:
                 results = scrape_jobs(
-                    site_name=["google", "glassdoor"],
+                    site_name=["google"],
                     search_term=keyword,
                     location=location,
                     results_wanted=10,
@@ -222,76 +222,6 @@ def scrape_indeed(keyword, location):
         print(f"  [Indeed] Error: {e}")
 
     print(f"  [Indeed] '{keyword}' / {location} → {len(jobs)} jobs")
-    return jobs
-
-
-# ── WORKDAY ATS (JSON API — clean & reliable) ─────────────────────────
-WORKDAY_SEARCH_KEYWORDS = ["US Tax", "1040"]
-INDIA_LOCATION = re.compile(
-    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|delhi|gurugram|remote",
-    re.IGNORECASE,
-)
-
-
-def scrape_workday(company_name, tenant, career_path, wd_num=1):
-    """
-    Scrape Workday ATS via the public CXS JSON API.
-    POST /wday/cxs/{tenant}/{career_path}/jobs  →  returns structured JSON.
-    No login, no HTML parsing, works from cloud IPs.
-    """
-    jobs     = []
-    api_url  = (
-        f"https://{tenant}.wd{wd_num}.myworkdayjobs.com"
-        f"/wday/cxs/{tenant}/{career_path}/jobs"
-    )
-    base_url = f"https://{tenant}.wd{wd_num}.myworkdayjobs.com"
-
-    seen_in_this_company = set()
-
-    for keyword in WORKDAY_SEARCH_KEYWORDS:
-        try:
-            r = SESSION.post(
-                api_url,
-                json={"appliedFacets": {}, "limit": 20, "offset": 0, "searchText": keyword},
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
-                timeout=15,
-            )
-            if r.status_code == 404:
-                print(f"  [Workday/{company_name}] 404 — path may be wrong, skipping")
-                break
-            if r.status_code != 200:
-                print(f"  [Workday/{company_name}] HTTP {r.status_code}")
-                break
-
-            postings = r.json().get("jobPostings", [])
-            for p in postings:
-                title    = p.get("title", "").strip()
-                loc      = p.get("locationsText", "India").strip()
-                posted   = p.get("postedOn", "")           # e.g. "Posted Today"
-                ext_path = p.get("externalPath", "")
-                link     = f"{base_url}{ext_path}" if ext_path else ""
-
-                # Only India locations
-                if loc and not INDIA_LOCATION.search(loc):
-                    continue
-
-                if not title or not link:
-                    continue
-
-                # Deduplicate within this company across keyword loops
-                dedup_key = link or title.lower()
-                if dedup_key in seen_in_this_company:
-                    continue
-                seen_in_this_company.add(dedup_key)
-
-                jobs.append(_make_job(title, company_name, loc, link,
-                                      posted=posted, source=f"Workday"))
-        except Exception as e:
-            print(f"  [Workday/{company_name}] Error for '{keyword}': {e}")
-            break
-        _delay()
-
-    print(f"  [Workday/{company_name}] → {len(jobs)} jobs")
     return jobs
 
 
@@ -447,55 +377,6 @@ def scrape_company_sites():
     return jobs
 
 
-# ── GOOGLE JOBS + GLASSDOOR via JobSpy (free library) ─────────────────
-JOBSPY_KEYWORDS  = ["US Tax", "Tax Analyst", "Tax Compliance", "US Taxation"]
-JOBSPY_LOCATIONS = ["Hyderabad India", "Bangalore India", "Chennai India"]
-
-
-def scrape_jobspy():
-    """
-    Scrape Google Jobs + Glassdoor using python-jobspy (free, open source).
-    Falls back silently if library not installed.
-    """
-    jobs = []
-    try:
-        from jobspy import scrape_jobs
-    except ImportError:
-        print("  [JobSpy] python-jobspy not installed — skipping")
-        return jobs
-
-    for keyword in JOBSPY_KEYWORDS:
-        for location in JOBSPY_LOCATIONS:
-            try:
-                results = scrape_jobs(
-                    site_name=["google", "glassdoor"],
-                    search_term=keyword,
-                    location=location,
-                    results_wanted=10,
-                    hours_old=24,
-                    country_indeed="India",
-                    verbose=0,
-                )
-                for _, row in results.iterrows():
-                    try:
-                        title   = str(row.get("title",    "") or "")
-                        company = str(row.get("company",  "") or "")
-                        loc_str = str(row.get("location", location) or location)
-                        link    = str(row.get("job_url",  "") or "")
-                        posted  = str(row.get("date_posted", "") or "")
-                        src     = str(row.get("site", "Google Jobs") or "Google Jobs").title()
-                        if title and link:
-                            jobs.append(_make_job(title, company, loc_str, link,
-                                                  posted=posted, source=src))
-                    except Exception:
-                        pass
-                print(f"  [JobSpy] '{keyword}' / {location} → {len(results)} jobs")
-            except Exception as e:
-                print(f"  [JobSpy] '{keyword}' / {location} error: {e}")
-            _delay()
-    return jobs
-
-
 # ── MAIN ──────────────────────────────────────────────────────────────
 def fetch_all_jobs(since_seconds=86400):
     """
@@ -520,18 +401,9 @@ def fetch_all_jobs(since_seconds=86400):
             add(scrape_linkedin(kw, loc, since_seconds))
             _delay()
 
-    # Google Jobs + Glassdoor via JobSpy
-    print(f"\n[JobSpy] Scanning Google Jobs + Glassdoor...")
+    # Google Jobs via JobSpy
+    print(f"\n[JobSpy] Scanning Google Jobs...")
     add(scrape_jobspy())
-
-    # Workday ATS — all configured companies
-    workday_cos = getattr(config, "WORKDAY_COMPANIES", [])
-    print(f"\n[Workday] Scanning {len(workday_cos)} companies...")
-    for co in workday_cos:
-        add(scrape_workday(
-            co["name"], co["tenant"], co["path"], co.get("wd", 1)
-        ))
-        _delay()
 
     # Indeed.co.in — last 1 day
     print(f"\n[Indeed] Scanning...")
