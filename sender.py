@@ -4,7 +4,7 @@ Telegram sender — formats and sends job posts to the channel.
 import requests
 import re
 import time
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import config
 
 API = f"https://api.telegram.org/bot{config.BOT_TOKEN}"
@@ -53,6 +53,48 @@ def _post(text, chat_id=None):
     except Exception as e:
         print(f"[Telegram] Send error: {e}")
         return False
+
+
+def _format_posted(posted, fetched_at=""):
+    """
+    Return a human-readable posted time string in IST.
+    - ISO date  "2026-03-08"           → "08 Mar 2026"
+    - ISO datetime "2026-03-08T10:30"  → "08 Mar 2026, 04:00 PM IST"  (converted to IST)
+    - Relative  "1 day ago"            → "1 day ago"
+    - Empty                            → use fetched_at converted to IST
+    """
+    IST_OFFSET = timedelta(hours=5, minutes=30)
+
+    p = str(posted or "").strip()
+
+    # Try ISO date/datetime format
+    if p and re.match(r"\d{4}-\d{2}-\d{2}", p):
+        try:
+            dt = datetime.fromisoformat(p[:19])  # handles "2026-03-08" and "2026-03-08T10:30:00"
+            if len(p) >= 16:
+                # Has time component — convert UTC → IST
+                dt_ist = dt + IST_OFFSET
+                return dt_ist.strftime("%d %b %Y, %I:%M %p IST")
+            else:
+                # Date only
+                return dt.strftime("%d %b %Y")
+        except Exception:
+            pass
+
+    # Relative string from Indeed / Naukri / Workday — return as-is
+    if p:
+        return p
+
+    # Fallback: use fetched_at (when bot scraped it), convert UTC → IST
+    if fetched_at:
+        try:
+            dt = datetime.fromisoformat(str(fetched_at)[:19])
+            dt_ist = dt + IST_OFFSET
+            return f"Found at {dt_ist.strftime('%d %b %Y, %I:%M %p IST')}"
+        except Exception:
+            pass
+
+    return ""
 
 
 def _urgency_tag(posted):
@@ -134,6 +176,11 @@ def format_job(job):
         f"🎓 *Qualification:* {safe_qual}",
         f"👨‍💻 *Experience:* {safe_exp}",
     ]
+
+    # Posted time — exact date/time in IST where available
+    posted_str = _format_posted(posted, job.get("fetched_at", ""))
+    if posted_str:
+        lines.append(f"⏰ *Posted:* {_escape(posted_str)}")
 
     # Salary (if mentioned)
     if salary and salary.lower() not in ("not mentioned", ""):

@@ -411,23 +411,13 @@ def main():
         log("Bot is PAUSED. Send /resume to Telegram bot to restart.")
         return
 
-    # ── Compute fetch window based on last run time ──────────────────────
+    # Always fetch last 24 hours — seen_jobs.json handles deduplication
+    # Previous approach (dynamic 5-min window) caused jobs to be missed all day
     now_utc = datetime.utcnow()
-    last_run_at = state.get("last_run_at", "")
-    if last_run_at:
-        try:
-            last_dt = datetime.fromisoformat(last_run_at)
-            elapsed = int((now_utc - last_dt).total_seconds())
-            # Add 3-minute buffer so we never miss a job at the boundary
-            # Cap at 1 hour to avoid huge fetches after a long gap
-            since_seconds = min(elapsed + 180, 3600)
-        except Exception:
-            since_seconds = 3600
-    else:
-        since_seconds = 86400   # first ever run — fetch all of today
-    log(f"Fetch window: last {since_seconds // 60} minutes (last run: {last_run_at or 'never'})")
+    since_seconds = 86400
+    log(f"Fetch window: 24 hours (last run: {state.get('last_run_at') or 'never'})")
 
-    # Record this run time BEFORE fetching so next run's window is correct
+    # Record this run time for stats/logging
     state["last_run_at"] = now_utc.isoformat()
     save_state(state)
 
@@ -500,8 +490,9 @@ def main():
         log(f"Baseline set: {len(seen)} jobs. Next cycle sends only NEW jobs.")
         return
 
-    # New jobs only
+    # New jobs only — sorted oldest-first so channel shows newest at top
     new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]
+    new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
     log(f"New jobs to send: {len(new_jobs)}")
 
     if not new_jobs:
