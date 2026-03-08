@@ -103,7 +103,7 @@ def scrape_linkedin(keyword, location, since_seconds=86400):
     return jobs
 
 
-# ── GOOGLE JOBS + GLASSDOOR via JobSpy ───────────────────────────────
+# ── GOOGLE JOBS via JobSpy ────────────────────────────────────────────
 JOBSPY_KEYWORDS = ["US Tax", "Tax Analyst", "Tax Compliance", "US Taxation"]
 JOBSPY_LOCATIONS = ["Hyderabad", "Bangalore", "Chennai"]
 
@@ -455,55 +455,6 @@ def scrape_company_sites():
     return jobs
 
 
-# ── GOOGLE JOBS + GLASSDOOR via JobSpy (free library) ─────────────────
-JOBSPY_KEYWORDS  = ["US Tax", "Tax Analyst", "Tax Compliance", "US Taxation"]
-JOBSPY_LOCATIONS = ["Hyderabad India", "Bangalore India", "Chennai India"]
-
-
-def scrape_jobspy():
-    """
-    Scrape Google Jobs + Glassdoor using python-jobspy (free, open source).
-    Falls back silently if library not installed.
-    """
-    jobs = []
-    try:
-        from jobspy import scrape_jobs
-    except ImportError:
-        print("  [JobSpy] python-jobspy not installed — skipping")
-        return jobs
-
-    for keyword in JOBSPY_KEYWORDS:
-        for location in JOBSPY_LOCATIONS:
-            try:
-                results = scrape_jobs(
-                    site_name=["google", "glassdoor"],
-                    search_term=keyword,
-                    location=location,
-                    results_wanted=10,
-                    hours_old=24,
-                    country_indeed="India",
-                    verbose=0,
-                )
-                for _, row in results.iterrows():
-                    try:
-                        title   = str(row.get("title",    "") or "")
-                        company = str(row.get("company",  "") or "")
-                        loc_str = str(row.get("location", location) or location)
-                        link    = str(row.get("job_url",  "") or "")
-                        posted  = str(row.get("date_posted", "") or "")
-                        src     = str(row.get("site", "Google Jobs") or "Google Jobs").title()
-                        if title and link:
-                            jobs.append(_make_job(title, company, loc_str, link,
-                                                  posted=posted, source=src))
-                    except Exception:
-                        pass
-                print(f"  [JobSpy] '{keyword}' / {location} → {len(results)} jobs")
-            except Exception as e:
-                print(f"  [JobSpy] '{keyword}' / {location} error: {e}")
-            _delay()
-    return jobs
-
-
 # ── MAIN ──────────────────────────────────────────────────────────────
 def fetch_all_jobs(since_seconds=86400):
     """
@@ -528,8 +479,8 @@ def fetch_all_jobs(since_seconds=86400):
             add(scrape_linkedin(kw, loc, since_seconds))
             _delay()
 
-    # Google Jobs + Glassdoor via JobSpy
-    print(f"\n[JobSpy] Scanning Google Jobs + Glassdoor...")
+    # Google Jobs via JobSpy
+    print(f"\n[JobSpy] Scanning Google Jobs...")
     add(scrape_jobspy())
 
     # Workday ATS — all configured companies
