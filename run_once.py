@@ -161,7 +161,7 @@ def handle_commands(state, stats):
                     f"📊 *Today ({stats['date']}):*\n"
                     f"• Jobs sent: *{stats['sent']}*\n"
                     f"• Companies: *{len(stats['companies'])}*\n"
-                    f"⏱ Checks every *10 minutes*\n"
+                    f"⏱ Checks every *5 minutes*\n"
                     f"🕐 {datetime.now().strftime('%d %b %Y %H:%M IST')}"
                 )
                 requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
@@ -271,8 +271,6 @@ Candidate Profile:
 
 Return ONLY valid JSON — no markdown, no explanation:
 {{
-  "responsibilities": ["specific point 1 from actual job", "point 2", "point 3", "point 4", "point 5"],
-  "skills": "skill1, skill2, skill3, skill4, skill5",
   "experience": "X-Y Years in specific area",
   "qualification": "exact degree/certification from job",
   "salary": "salary range if mentioned, else Not mentioned",
@@ -282,8 +280,6 @@ Return ONLY valid JSON — no markdown, no explanation:
 }}
 
 Rules:
-- responsibilities: extract 5 real specific bullets from this actual job description
-- skills: list real tools/knowledge (1040, CCH, ProSeries, IRS, XML, ATS testing etc.)
 - experience: exact years mentioned or infer from seniority
 - qualification: B.Com / CA / CPA / MBA as stated in job
 - salary: extract if mentioned (e.g. "12-18 LPA"), else "Not mentioned"
@@ -303,10 +299,6 @@ Rules:
 
         data = json.loads(text)
 
-        if data.get("responsibilities"):
-            job["_responsibilities"] = [r for r in data["responsibilities"] if r][:5]
-        if data.get("skills"):
-            job["_skills"] = data["skills"]
         if data.get("experience"):
             job["_experience"] = data["experience"]
         if data.get("qualification"):
@@ -329,23 +321,6 @@ Rules:
     return job
 
 
-# ── Description parsers (regex fallback) ─────────────────────────────
-def extract_section(desc, *headers):
-    for header in headers:
-        pattern = re.compile(
-            rf"{header}\s*:?\s*\n(.*?)(?=\n[A-Z][^\n]{{3,}}:|\Z)",
-            re.IGNORECASE | re.DOTALL
-        )
-        match = pattern.search(desc)
-        if match:
-            block = match.group(1)
-            lines = [l.strip().lstrip("•·-–*▪►").strip()
-                     for l in re.split(r"[\n•·\|]", block) if len(l.strip()) > 20]
-            if lines:
-                return lines[:5]
-    return []
-
-
 def extract_experience(desc, title):
     patterns = [
         r"(\d+\+?\s*(?:to|-)\s*\d*\+?\s*years?\s*(?:of\s*)?(?:experience|exp)?[^\n.]*)",
@@ -362,101 +337,6 @@ def extract_experience(desc, title):
     elif any(x in t for x in ["associate", "junior", "jr"]):
         return "1-2 Years (US Tax)"
     return "2-5 Years (US Tax)"
-
-
-def extract_skills(desc, title, raw_skills):
-    if raw_skills and len(raw_skills) > 15:
-        return raw_skills
-    skills_section = extract_section(desc,
-        "skills", "required skills", "key skills",
-        "technical skills", "qualifications", "requirements"
-    )
-    if skills_section:
-        return ", ".join(skills_section[:4])
-    skill_terms = re.findall(
-        r"\b(1040|1041|1120|1065|990|5500|"
-        r"US Tax|IRS|federal tax|state tax|"
-        r"tax software|MS Excel|QuickBooks|Lacerte|ProSeries|"
-        r"CCH|GoSystem|UltraTax|Drake|"
-        r"XML|XSD|e-file|ATS testing|"
-        r"tax compliance|tax research|CPA|EA)\b",
-        desc, re.IGNORECASE
-    )
-    if skill_terms:
-        unique = list(dict.fromkeys([s.strip() for s in skill_terms]))
-        return ", ".join(unique[:6])
-    t = title.lower()
-    if any(x in t for x in ["preparer", "preparation"]):
-        return "US Tax preparation, 1040/1041/1065/1120, Tax software, MS Excel"
-    elif any(x in t for x in ["analyst", "compliance"]):
-        return "US Tax, Federal/State regulations, IRS, Tax compliance, MS Excel"
-    elif any(x in t for x in ["software", "testing", "qa"]):
-        return "US Tax knowledge, Tax software, XML/XSD, ATS testing, QA"
-    return "US Tax, Tax compliance, MS Excel, Analytical skills"
-
-
-def extract_responsibilities(desc, title):
-    if desc and len(desc) > 100:
-        bullets = extract_section(desc,
-            "responsibilities", "roles and responsibilities",
-            "key responsibilities", "job responsibilities",
-            "duties", "what you will do", "your role"
-        )
-        if bullets:
-            return bullets
-        sents = [s.strip() for s in re.split(r"[.\n•·\|–-]", desc)
-                 if len(s.strip()) > 35 and not re.match(r'^[\d\s,/-]+$', s.strip())]
-        if len(sents) >= 3:
-            return sents[:5]
-    t = title.lower()
-    if any(x in t for x in ["preparer", "preparation"]):
-        return [
-            "Prepare US individual and business tax returns (1040, 1041, 1065, 1120)",
-            "Collect client financial data and ensure accuracy of tax filings",
-            "Ensure compliance with IRS and state tax regulations",
-            "Research tax issues and advise on minimizing tax liability",
-            "Track filing deadlines and maintain complete tax records",
-        ]
-    elif any(x in t for x in ["reviewer", "review"]):
-        return [
-            "Review US tax returns (1040, 1041, 1120, 1065) for accuracy and compliance",
-            "Identify errors and discrepancies in tax filings",
-            "Ensure all returns meet IRS and state filing requirements",
-            "Provide feedback and guidance to preparers",
-            "Maintain quality standards across all reviewed returns",
-        ]
-    elif any(x in t for x in ["analyst", "compliance", "regulatory"]):
-        return [
-            "Analyze US federal and state tax law changes and assess their impact",
-            "Prepare and submit ATS test scenarios to state tax authorities",
-            "Coordinate with development teams on regulatory updates",
-            "Monitor IRS and state agency announcements for changes",
-            "Support compliance with US federal and state tax requirements",
-        ]
-    elif any(x in t for x in ["software", "testing", "qa", "e-file", "efile"]):
-        return [
-            "Test US tax software for 1040, 1041, 1065, 1120 form accuracy",
-            "Validate tax calculations against IRS rules and state requirements",
-            "Create and execute test scenarios for e-file and print submissions",
-            "Identify and report defects, coordinate fixes with development",
-            "Support government agency approvals and ATS acceptance testing",
-        ]
-    elif any(x in t for x in ["senior", "manager", "lead"]):
-        return [
-            "Lead and mentor a team of US tax professionals",
-            "Oversee tax compliance, preparation and quality review processes",
-            "Review complex tax returns and regulatory submissions",
-            "Manage relationships with IRS and state tax authorities",
-            "Drive process improvements across tax operations",
-        ]
-    else:
-        return [
-            "Handle US tax preparation and compliance activities",
-            "Review and validate tax returns (1040, 1041, 1065, 1120)",
-            "Ensure accurate and timely filings per federal and state regulations",
-            "Coordinate with clients and internal teams on tax matters",
-            "Support e-file processes and IRS/state authority submissions",
-        ]
 
 
 def extract_qualification(desc, title):

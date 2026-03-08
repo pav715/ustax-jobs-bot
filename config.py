@@ -74,13 +74,7 @@ LOCATIONS = [
 ]
 
 # ── Timing ────────────────────────────────────────────────────────────
-CHECK_INTERVAL_MINUTES = 1   # local; GitHub Actions minimum is 5 min
-
-# ── Filters ──────────────────────────────────────────────────────────
-DAYS_OLD_MAX = 1
-
-# ── Messaging ────────────────────────────────────────────────────────
-SHOW_STARTUP_MESSAGE = False
+CHECK_INTERVAL_MINUTES = 5   # GitHub Actions cron: every 5 minutes
 
 # ── Your Profile (used by AI for match scoring) ───────────────────────
 USER_PROFILE = (

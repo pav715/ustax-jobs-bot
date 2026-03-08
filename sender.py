@@ -56,16 +56,13 @@ def _post(text, chat_id=None):
 
 
 def _urgency_tag(posted):
-    """Return urgency label based on posting date."""
+    """Return urgency label — all jobs are today-only so always 'Posted Today'."""
     if not posted:
         return ""
     try:
         posted_date = date.fromisoformat(str(posted)[:10])
-        delta = (date.today() - posted_date).days
-        if delta == 0:
-            return "🔴 *URGENT — Posted Today!*\n"
-        elif delta == 1:
-            return "🟡 *Posted Yesterday*\n"
+        if (date.today() - posted_date).days == 0:
+            return "🔴 *Posted Today!*\n"
     except Exception:
         pass
     return ""

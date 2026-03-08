@@ -46,7 +46,7 @@ def job_id(url, title, company):
 
 
 def _delay():
-    time.sleep(random.uniform(2.5, 4.0))
+    time.sleep(random.uniform(1.0, 2.0))
 
 
 def _make_job(title, company, location, url, posted="", exp="", skills="", desc="", source=""):
