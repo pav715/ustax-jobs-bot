@@ -40,7 +40,9 @@ TAX_PATTERN = re.compile(
 
 
 def job_id(url, title, company):
-    raw = f"{url}{title}{company}".lower().strip()
+    # Use title+company only — same job from multiple sources gets the same ID
+    # This prevents LinkedIn + Indeed + Naukri all posting the same role
+    raw = f"{title}{company}".lower().strip()
     return hashlib.md5(raw.encode()).hexdigest()[:16]
 
 
@@ -105,7 +107,7 @@ def scrape_linkedin(keyword, location, since_seconds=86400):
 
 # ── GOOGLE JOBS via JobSpy ────────────────────────────────────────────
 JOBSPY_KEYWORDS = ["US Tax", "Tax Analyst", "Tax Compliance", "US Taxation"]
-JOBSPY_LOCATIONS = ["Hyderabad", "Bangalore", "Chennai"]
+JOBSPY_LOCATIONS = ["Hyderabad", "Bangalore", "Chennai", "Mumbai", "Pune", "Kochi", "Visakhapatnam"]
 
 
 def scrape_jobspy():
@@ -162,7 +164,7 @@ INDEED_KEYWORDS = [
     "1040",
     "US Taxation",
 ]
-INDEED_LOCATIONS = ["Hyderabad", "Bangalore", "Chennai", "Remote"]
+INDEED_LOCATIONS = ["Hyderabad", "Bangalore", "Chennai", "Mumbai", "Pune", "Nagpur", "Kochi", "Visakhapatnam"]
 
 
 def scrape_indeed(keyword, location):
@@ -232,7 +234,7 @@ NAUKRI_KEYWORDS = [
     "Tax Analyst",
     "Tax Compliance",
 ]
-NAUKRI_LOCATIONS = ["hyderabad", "bangalore", "chennai"]
+NAUKRI_LOCATIONS = ["hyderabad", "bangalore", "chennai", "mumbai", "pune", "nagpur", "kochi", "visakhapatnam", "vijayawada"]
 
 
 def scrape_naukri(keyword, location="hyderabad"):
@@ -384,15 +386,25 @@ def fetch_all_jobs(since_seconds=86400):
     since_seconds: only fetch LinkedIn jobs posted in this window (default 1 day).
     Returns deduplicated list sorted newest first.
     """
-    all_jobs  = []
-    seen_urls = set()
+    all_jobs   = []
+    seen_urls  = set()
+    seen_ids   = set()
 
     def add(results):
         for job in results:
-            key = job.get("url") or job.get("id")
-            if key and key not in seen_urls:
-                seen_urls.add(key)
-                all_jobs.append(job)
+            jid = job.get("id", "")
+            url = job.get("url", "")
+            # Skip if same title+company already seen this cycle (from another source)
+            if jid and jid in seen_ids:
+                continue
+            # Skip if exact same URL already seen
+            if url and url in seen_urls:
+                continue
+            if jid:
+                seen_ids.add(jid)
+            if url:
+                seen_urls.add(url)
+            all_jobs.append(job)
 
     # LinkedIn — keywords × locations, time-windowed
     print(f"\n[LinkedIn] Scanning (last {since_seconds // 60} min window)...")
