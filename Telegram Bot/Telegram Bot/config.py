@@ -91,39 +91,6 @@ MIN_MATCH_SCORE = 50
 # Max jobs to send per cycle (prevents spam on first big batch)
 MAX_JOBS_PER_CYCLE = 15
 
-# ── Workday ATS Companies (verified URLs from myworkdayjobs.com) ──────
-# API: POST https://{tenant}.wd{wd}.myworkdayjobs.com/wday/cxs/{tenant}/{path}/jobs
-WORKDAY_COMPANIES = [
-    # ── Tax Software (verified) ──
-    {"name": "Thomson Reuters",   "tenant": "thomsonreuters",  "path": "External_Career_Site",   "wd": 5},
-    {"name": "Intuit",            "tenant": "intuit",          "path": "Intuit_Careers",         "wd": 1},
-    {"name": "H&R Block",         "tenant": "hrblock",         "path": "External",               "wd": 5},
-    {"name": "Wolters Kluwer",    "tenant": "wolterskluwer",   "path": "wkcareers",              "wd": 5},
-    {"name": "Vertex Inc",        "tenant": "vertexinc",       "path": "Vertex_Careers",         "wd": 1},
-    {"name": "Ryan LLC",          "tenant": "ryan",            "path": "RyanCareers",            "wd": 1},
-    # ── Big 4 / Accounting ──
-    {"name": "Deloitte",          "tenant": "deloitte",        "path": "Deloitte-Careers",       "wd": 1},
-    {"name": "PwC",               "tenant": "pwc",             "path": "Global_Campus_Careers",  "wd": 3},
-    {"name": "Grant Thornton",    "tenant": "grantthornton",   "path": "GrantThorntonCareers",   "wd": 1},
-    {"name": "RSM",               "tenant": "rsm",             "path": "RSM_Careers",            "wd": 1},
-    # ── IT / BPO (verified) ──
-    {"name": "Accenture",         "tenant": "accenture",       "path": "AccentureCareers",       "wd": 103},
-    {"name": "Genpact",           "tenant": "genpact",         "path": "careers",                "wd": 1},
-    {"name": "Wipro",             "tenant": "wipro",           "path": "Wipro_Careers",          "wd": 3},
-    {"name": "Mphasis",           "tenant": "mphasis",         "path": "careers",                "wd": 1},
-    # ── Financial Services — US captives with large India tax teams (verified) ──
-    {"name": "Fidelity",          "tenant": "fmr",             "path": "FidelityCareers",        "wd": 1},
-    {"name": "Northern Trust",    "tenant": "ntrs",            "path": "northerntrust",          "wd": 1},
-    {"name": "Vanguard",          "tenant": "vanguard",        "path": "vanguard_external",      "wd": 5},
-    {"name": "BNY Mellon",        "tenant": "bnymellon",       "path": "BNY_Mellon_Careers",     "wd": 1},
-    {"name": "State Street",      "tenant": "statestreet",     "path": "External",               "wd": 1},
-    {"name": "Wells Fargo",       "tenant": "wellsfargo",      "path": "WellsFargoJobs",         "wd": 5},
-    {"name": "Citi",              "tenant": "citi",            "path": "External",               "wd": 5},
-    {"name": "BlackRock",         "tenant": "blackrock",       "path": "Careers",                "wd": 1},
-    {"name": "Morgan Stanley",    "tenant": "morganstanley",   "path": "Careers",                "wd": 1},
-    {"name": "Charles Schwab",    "tenant": "charlesschwab",   "path": "Careers",                "wd": 1},
-]
-
 # ── India Job Portals (HTML scrape) ───────────────────────────────────
 INDIA_PORTALS = [
     {"name": "Foundit",      "url": "https://www.foundit.in/srp/results?query=US+Tax&locations=India&experience=0&freshness=1"},

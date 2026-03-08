@@ -1,5 +1,5 @@
 """
-Job scraper — LinkedIn + Google Jobs + Glassdoor + Workday + Indeed + Naukri + India portals + company sites.
+Job scraper — LinkedIn + Google Jobs + Indeed + Naukri + India portals + company sites.
 """
 import requests
 import hashlib
@@ -225,84 +225,6 @@ def scrape_indeed(keyword, location):
     return jobs
 
 
-# ── WORKDAY ATS (JSON API — clean & reliable) ─────────────────────────
-WORKDAY_SEARCH_KEYWORDS = ["US Tax", "1040"]
-INDIA_LOCATION = re.compile(
-    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|delhi|gurugram|gurgaon|noida|remote",
-    re.IGNORECASE,
-)
-USA_LOCATION_WD = re.compile(
-    r"\b(usa|united\s*states?|u\.s\.a?\.?|new\s*york|california|texas|"
-    r"florida|illinois|new\s*jersey|georgia|ohio|virginia|pennsylvania|"
-    r"\bNY\b|\bCA\b|\bTX\b|\bFL\b|\bNJ\b|\bGA\b|\bOH\b|\bVA\b|\bPA\b)\b",
-    re.IGNORECASE,
-)
-
-
-def scrape_workday(company_name, tenant, career_path, wd_num=1):
-    """
-    Scrape Workday ATS via the public CXS JSON API.
-    POST /wday/cxs/{tenant}/{career_path}/jobs  →  returns structured JSON.
-    No login, no HTML parsing, works from cloud IPs.
-    """
-    jobs     = []
-    api_url  = (
-        f"https://{tenant}.wd{wd_num}.myworkdayjobs.com"
-        f"/wday/cxs/{tenant}/{career_path}/jobs"
-    )
-    base_url = f"https://{tenant}.wd{wd_num}.myworkdayjobs.com"
-
-    seen_in_this_company = set()
-
-    for keyword in WORKDAY_SEARCH_KEYWORDS:
-        try:
-            r = SESSION.post(
-                api_url,
-                json={"appliedFacets": {}, "limit": 20, "offset": 0, "searchText": keyword},
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
-                timeout=15,
-            )
-            if r.status_code == 404:
-                print(f"  [Workday/{company_name}] 404 — path may be wrong, skipping")
-                break
-            if r.status_code != 200:
-                print(f"  [Workday/{company_name}] HTTP {r.status_code}")
-                break
-
-            postings = r.json().get("jobPostings", [])
-            for p in postings:
-                title    = p.get("title", "").strip()
-                loc      = p.get("locationsText", "India").strip()
-                posted   = p.get("postedOn", "")           # e.g. "Posted Today"
-                ext_path = p.get("externalPath", "")
-                link     = f"{base_url}{ext_path}" if ext_path else ""
-
-                # Only India / Remote — reject USA locations explicitly
-                if USA_LOCATION_WD.search(loc):
-                    continue
-                if loc and not INDIA_LOCATION.search(loc):
-                    continue
-
-                if not title or not link:
-                    continue
-
-                # Deduplicate within this company across keyword loops
-                dedup_key = link or title.lower()
-                if dedup_key in seen_in_this_company:
-                    continue
-                seen_in_this_company.add(dedup_key)
-
-                jobs.append(_make_job(title, company_name, loc, link,
-                                      posted=posted, source=f"Workday"))
-        except Exception as e:
-            print(f"  [Workday/{company_name}] Error for '{keyword}': {e}")
-            break
-        _delay()
-
-    print(f"  [Workday/{company_name}] → {len(jobs)} jobs")
-    return jobs
-
-
 # ── NAUKRI.COM ────────────────────────────────────────────────────────
 NAUKRI_KEYWORDS = [
     "US Tax",
@@ -482,15 +404,6 @@ def fetch_all_jobs(since_seconds=86400):
     # Google Jobs via JobSpy
     print(f"\n[JobSpy] Scanning Google Jobs...")
     add(scrape_jobspy())
-
-    # Workday ATS — all configured companies
-    workday_cos = getattr(config, "WORKDAY_COMPANIES", [])
-    print(f"\n[Workday] Scanning {len(workday_cos)} companies...")
-    for co in workday_cos:
-        add(scrape_workday(
-            co["name"], co["tenant"], co["path"], co.get("wd", 1)
-        ))
-        _delay()
 
     # Indeed.co.in — last 1 day
     print(f"\n[Indeed] Scanning...")
