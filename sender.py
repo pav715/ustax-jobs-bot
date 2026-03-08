@@ -71,103 +71,6 @@ def _urgency_tag(posted):
     return ""
 
 
-def _match_bar(score):
-    """Visual match score bar."""
-    if not score:
-        return ""
-    filled = round(score / 10)
-    bar = "█" * filled + "░" * (10 - filled)
-    if score >= 80:
-        label = "Excellent fit"
-    elif score >= 65:
-        label = "Good fit"
-    elif score >= 50:
-        label = "Moderate fit"
-    else:
-        label = "Low fit"
-    return f"🎯 *Match:* {score}% {bar} _{label}_\n"
-
-
-def _responsibilities(title, desc):
-    t = title.lower()
-    if desc and len(desc) > 80:
-        sents = [s.strip() for s in re.split(r'[.\n•\|\-–]', desc) if len(s.strip()) > 30]
-        sents = [s for s in sents if not re.match(r'^[\d\s,/-]+$', s)]
-        if len(sents) >= 3:
-            return sents[:5]
-    if any(x in t for x in ["qa", "quality", "e-file", "efile", "testing"]):
-        return [
-            "Perform QA testing for US tax software (1040, 1041, 1065, 1120 forms)",
-            "Test tax calculations and validate software outputs against IRS rules",
-            "Identify and report bugs, coordinate fixes with development teams",
-            "Create test scenarios and support e-file approvals with US state agencies",
-            "Ensure tax products meet compliance and quality standards",
-        ]
-    elif any(x in t for x in ["reviewer", "review"]):
-        return [
-            "Review US tax returns (1040, 1041, 1120, 1065) for accuracy and compliance",
-            "Identify errors and discrepancies in tax filings",
-            "Ensure all returns meet IRS and state filing requirements",
-            "Provide feedback and guidance to tax preparers",
-            "Maintain quality standards across all reviewed returns",
-        ]
-    elif any(x in t for x in ["preparer", "preparation"]):
-        return [
-            "Prepare and review US individual/business tax returns (1040, 1041, 1065, 1120)",
-            "Collect and organize client financial data for accurate tax filing",
-            "Ensure all returns comply with US federal and state tax laws",
-            "Research tax issues and advise on minimizing liabilities",
-            "Maintain records of all filings and track deadlines",
-        ]
-    elif any(x in t for x in ["analyst", "compliance", "regulatory"]):
-        return [
-            "Analyze US federal and state tax law changes and assess their impact",
-            "Prepare and submit ATS test scenarios to US state tax authorities",
-            "Coordinate with development teams to implement regulatory updates",
-            "Monitor IRS and state agency announcements for changes",
-            "Support compliance with US federal and state tax requirements",
-        ]
-    elif any(x in t for x in ["programmer", "developer", "software", "filing"]):
-        return [
-            "Develop and maintain US federal/state tax form software modules",
-            "Analyze EF schema and business rule changes for print and e-file",
-            "Liaise with government agencies to obtain annual form approvals",
-            "Troubleshoot and resolve production issues in tax software",
-            "Update XML schemas and business rules for compliance",
-        ]
-    elif any(x in t for x in ["senior", "manager", "lead"]):
-        return [
-            "Lead and mentor a team of US tax professionals",
-            "Oversee tax compliance, preparation and quality review processes",
-            "Review complex tax returns and regulatory submissions",
-            "Manage relationships with IRS and state tax authorities",
-            "Drive process improvements across tax operations",
-        ]
-    else:
-        return [
-            "Handle US tax preparation and compliance activities",
-            "Review and validate tax returns (1040, 1041, 1065, 1120)",
-            "Ensure accurate and timely filings per federal and state regulations",
-            "Coordinate with clients and internal teams on tax matters",
-            "Support e-file processes and IRS/state authority submissions",
-        ]
-
-
-def _skills(title, raw_skills):
-    if raw_skills and len(raw_skills) > 10:
-        return raw_skills
-    t = title.lower()
-    if any(x in t for x in ["qa", "quality", "testing", "e-file"]):
-        return "US Tax knowledge, QA testing, XML/HTML, Analytical skills"
-    elif any(x in t for x in ["preparer", "preparation"]):
-        return "US Tax preparation, 1040/1041/1065/1120, Tax software, MS Excel"
-    elif any(x in t for x in ["software", "programmer", "developer"]):
-        return "Tax software, XML/XSD schemas, ATS testing, US Tax regulations"
-    elif any(x in t for x in ["analyst", "compliance"]):
-        return "US Tax, Federal/State regulations, IRS, Tax compliance, MS Excel"
-    else:
-        return "US Tax, Compliance, Tax software, Analytical skills, MS Excel"
-
 
 def _qualification(title):
     t = title.lower()
@@ -197,16 +100,11 @@ def format_job(job):
     loc     = job.get("location", "India / Remote")
     url     = job.get("url", "")
     source  = job.get("source", "")
-    desc    = job.get("description", "")
     posted  = job.get("posted", "")
 
-    bullets = job.get("_responsibilities") or _responsibilities(title, desc)
-    skills  = job.get("_skills")          or _skills(title, job.get("skills", ""))
-    qual    = job.get("_qualification")   or _qualification(title)
-    exp     = job.get("_experience")      or _experience(title, job.get("experience", ""))
-    salary  = job.get("_salary", "")
-    score   = job.get("_match_score", 0)
-    highlights = job.get("_match_highlights", [])
+    qual   = job.get("_qualification") or _qualification(title)
+    exp    = job.get("_experience")    or _experience(title, job.get("experience", ""))
+    salary = job.get("_salary", "")
 
     # Location formatting
     if "remote" in loc.lower():
@@ -221,7 +119,6 @@ def format_job(job):
     safe_loc     = _escape(loc_str)
     safe_qual    = _escape(qual)
     safe_exp     = _escape(exp)
-    safe_skills  = _escape(skills)
 
     lines = []
 
@@ -310,8 +207,6 @@ def send_and_pin_welcome():
         "• Senior / Manager US Tax roles\n\n"
         "📍 *Locations:* Hyderabad, Bangalore, Chennai, Remote & more\n\n"
         "🔔 *Turn on notifications* so you never miss a job\\!\n\n"
-        "💬 *Want a personal welcome guide?*\n"
-        "Start the bot: @USTaxjobs\\_bot — it will DM you details\\.\n\n"
         "✅ Good luck with your job search\\! 🚀"
     )
 
@@ -361,7 +256,6 @@ def send_and_pin_welcome():
     except Exception as e:
         print(f"[Pin] Pin error: {e}")
         return False
-
 
 
 def send_fail_alert(error_msg=""):

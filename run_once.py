@@ -625,11 +625,7 @@ def main():
         if use_ai:
             job = ai_enrich_job(job)
 
-        # Step 3: regex fallback
-        if not job.get("_responsibilities"):
-            job["_responsibilities"] = extract_responsibilities(desc, title)
-        if not job.get("_skills"):
-            job["_skills"]        = extract_skills(desc, title, job.get("skills", ""))
+        # Step 3: regex fallback for fields still shown in message
         if not job.get("_experience"):
             job["_experience"]    = extract_experience(desc, title)
         if not job.get("_qualification"):
