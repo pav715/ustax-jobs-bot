@@ -91,6 +91,41 @@ MIN_MATCH_SCORE = 50
 # Max jobs to send per cycle (prevents spam on first big batch)
 MAX_JOBS_PER_CYCLE = 15
 
+# ── Workday ATS Companies ─────────────────────────────────────────────
+# Format: tenant = subdomain, path = career site path, wd = workday instance number
+# API: POST https://{tenant}.wd{wd}.myworkdayjobs.com/wday/cxs/{tenant}/{path}/jobs
+WORKDAY_COMPANIES = [
+    # ── Tax Software ──
+    {"name": "Thomson Reuters",   "tenant": "thomsonreuters",  "path": "External_Career_Site",   "wd": 1},
+    {"name": "Intuit",            "tenant": "intuit",          "path": "Intuit_Careers",         "wd": 1},
+    {"name": "H&R Block",         "tenant": "hrblock",         "path": "External",               "wd": 5},
+    {"name": "Wolters Kluwer",    "tenant": "wolterskluwer",   "path": "wkcareers",              "wd": 5},
+    {"name": "Vertex Inc",        "tenant": "vertexinc",       "path": "Vertex_Careers",         "wd": 1},
+    {"name": "Ryan LLC",          "tenant": "ryan",            "path": "Ryan_Careers",           "wd": 1},
+    # ── Big 4 / Accounting ──
+    {"name": "Deloitte",          "tenant": "deloitte",        "path": "Deloitte-Careers",       "wd": 1},
+    {"name": "KPMG",              "tenant": "kpmg",            "path": "campus",                 "wd": 3},
+    {"name": "Grant Thornton",    "tenant": "grantthornton",   "path": "GrantThorntonCareers",   "wd": 1},
+    {"name": "RSM",               "tenant": "rsm",             "path": "RSM_Careers",            "wd": 1},
+    # ── IT / BPO ──
+    {"name": "Cognizant",         "tenant": "cognizant",       "path": "Cognizant_Careers",      "wd": 1},
+    {"name": "Genpact",           "tenant": "genpact",         "path": "Genpact_Careers",        "wd": 1},
+    {"name": "Wipro",             "tenant": "wipro",           "path": "External",               "wd": 3},
+    {"name": "Accenture",         "tenant": "accenture",       "path": "AccentureJobs",          "wd": 3},
+    {"name": "Mphasis",           "tenant": "mphasis",         "path": "Mphasis_Careers",        "wd": 1},
+    # ── Financial Services (US captives in India — large tax teams) ──
+    {"name": "BNY Mellon",        "tenant": "bnymellon",       "path": "Global",                 "wd": 1},
+    {"name": "State Street",      "tenant": "statestreet",     "path": "Global",                 "wd": 1},
+    {"name": "Northern Trust",    "tenant": "northerntrust",   "path": "NT",                     "wd": 5},
+    {"name": "Vanguard",          "tenant": "vanguard",        "path": "vanguard",               "wd": 5},
+    {"name": "Fidelity",          "tenant": "fidelity",        "path": "Fidelity",               "wd": 5},
+    {"name": "Wells Fargo",       "tenant": "wellsfargo",      "path": "WellsFargoJobs",         "wd": 5},
+    {"name": "Citi",              "tenant": "citi",            "path": "Citi_Careers",           "wd": 5},
+    {"name": "BlackRock",         "tenant": "blackrock",       "path": "BlackRock",              "wd": 1},
+    {"name": "Morgan Stanley",    "tenant": "morganstanley",   "path": "morganstanley",          "wd": 1},
+    {"name": "Charles Schwab",    "tenant": "charlesschwab",   "path": "Careers",                "wd": 1},
+]
+
 # ── Company Career Sites ──────────────────────────────────────────────
 # Big 4 & Accounting Firms
 # IT / BPO / GCC companies
