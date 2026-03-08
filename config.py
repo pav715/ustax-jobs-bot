@@ -77,7 +77,7 @@ LOCATIONS = [
 CHECK_INTERVAL_MINUTES = 1   # local; GitHub Actions minimum is 5 min
 
 # ── Filters ──────────────────────────────────────────────────────────
-DAYS_OLD_MAX = 2
+DAYS_OLD_MAX = 1
 
 # ── Messaging ────────────────────────────────────────────────────────
 SHOW_STARTUP_MESSAGE = False

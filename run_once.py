@@ -24,14 +24,16 @@ def _get_gemini():
     if _gemini_model:
         return _gemini_model
     if not GEMINI_KEY:
+        print("[AI] GEMINI_API_KEY not set — AI enrichment disabled.")
         return None
     try:
         import google.generativeai as genai
         genai.configure(api_key=GEMINI_KEY)
-        _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+        _gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        print("[AI] Gemini 1.5 Flash initialized successfully.")
         return _gemini_model
     except Exception as e:
-        print(f"[AI] Gemini init failed: {e}")
+        print(f"[AI] Gemini init FAILED: {e}")
         return None
 
 SEEN_FILE      = "seen_jobs.json"
@@ -91,7 +93,7 @@ def load_state():
                 return json.load(f)
         except Exception:
             pass
-    return {"paused": False, "last_update_id": 0}
+    return {"paused": False, "last_update_id": 0, "last_run_at": ""}
 
 
 def save_state(state):
@@ -522,8 +524,27 @@ def main():
         log("Bot is PAUSED. Send /resume to Telegram bot to restart.")
         return
 
-    # Daily summary at 9 AM IST (3:30 AM UTC)
+    # ── Compute fetch window based on last run time ──────────────────────
     now_utc = datetime.utcnow()
+    last_run_at = state.get("last_run_at", "")
+    if last_run_at:
+        try:
+            last_dt = datetime.fromisoformat(last_run_at)
+            elapsed = int((now_utc - last_dt).total_seconds())
+            # Add 5-minute buffer so we never miss a job at the boundary
+            # Cap at 2 hours to avoid huge fetches after a long gap
+            since_seconds = min(elapsed + 300, 7200)
+        except Exception:
+            since_seconds = 3600
+    else:
+        since_seconds = 86400   # first ever run — fetch all of today
+    log(f"Fetch window: last {since_seconds // 60} minutes (last run: {last_run_at or 'never'})")
+
+    # Record this run time BEFORE fetching so next run's window is correct
+    state["last_run_at"] = now_utc.isoformat()
+    save_state(state)
+
+    # Daily summary at 9 AM IST (3:30 AM UTC)
     if now_utc.hour == 3 and 30 <= now_utc.minute < 40 and not stats.get("summary_sent"):
         send_daily_summary(stats)
         stats["summary_sent"] = True
@@ -533,7 +554,7 @@ def main():
     log(f"Loaded {len(seen)} previously seen jobs.")
 
     try:
-        jobs = fetch_all_jobs()
+        jobs = fetch_all_jobs(since_seconds=since_seconds)
     except Exception as e:
         log(f"Scrape error: {e}")
         send_fail_alert(f"Scrape error: {e}")
@@ -542,6 +563,22 @@ def main():
     # Filter: US Tax relevant only
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
+
+    # Filter: today's jobs only (skip jobs posted yesterday/2 days ago)
+    today_str = date.today().isoformat()
+    today_jobs = []
+    for j in us_tax_jobs:
+        posted = j.get("posted", "")
+        if not posted:
+            today_jobs.append(j)   # company sites have no date — include
+        else:
+            try:
+                if str(posted)[:10] >= today_str:
+                    today_jobs.append(j)
+            except Exception:
+                today_jobs.append(j)
+    log(f"Today's jobs only: {len(today_jobs)} (filtered out {len(us_tax_jobs) - len(today_jobs)} older jobs)")
+    us_tax_jobs = today_jobs
 
     # AUTO SEED: first run
     if len(seen) == 0 and len(us_tax_jobs) > 0:
@@ -567,8 +604,8 @@ def main():
         log(f"Capping to {config.MAX_JOBS_PER_CYCLE} jobs this cycle.")
         new_jobs = new_jobs[:config.MAX_JOBS_PER_CYCLE]
 
-    use_ai = bool(GEMINI_KEY)
-    log(f"AI: {'ON (Gemini Flash)' if use_ai else 'OFF — set GEMINI_API_KEY secret'}")
+    use_ai = _get_gemini() is not None
+    log(f"AI: {'ON (Gemini 1.5 Flash)' if use_ai else 'OFF — check GEMINI_API_KEY secret'}")
 
     enriched = []
     for job in new_jobs:

@@ -66,13 +66,13 @@ def _make_job(title, company, location, url, posted="", exp="", skills="", desc=
 
 
 # ── LINKEDIN (guest API — works on cloud) ─────────────────────────────
-def scrape_linkedin(keyword, location):
+def scrape_linkedin(keyword, location, since_seconds=86400):
     jobs = []
     try:
         url = (
             f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?"
             f"keywords={quote(keyword)}&location={quote(location)}"
-            f"&f_TPR=r{config.DAYS_OLD_MAX * 86400}&sortBy=DD&start=0"
+            f"&f_TPR=r{since_seconds}&sortBy=DD&start=0"
         )
         r = SESSION.get(url, timeout=12)
         if r.status_code != 200:
@@ -149,10 +149,10 @@ def scrape_company_sites():
 
 
 # ── MAIN ──────────────────────────────────────────────────────────────
-def fetch_all_jobs():
+def fetch_all_jobs(since_seconds=86400):
     """
     Fetch jobs from LinkedIn + company career sites.
-    Both work reliably from GitHub Actions cloud IPs.
+    since_seconds: only fetch LinkedIn jobs posted in this window (default 1 day).
     Returns deduplicated list sorted newest first.
     """
     all_jobs  = []
@@ -165,11 +165,11 @@ def fetch_all_jobs():
                 seen_urls.add(key)
                 all_jobs.append(job)
 
-    # LinkedIn — 6 keywords × 7 locations
-    print("\n[LinkedIn] Scanning...")
+    # LinkedIn — keywords × locations, time-windowed
+    print(f"\n[LinkedIn] Scanning (last {since_seconds // 60} min window)...")
     for kw in PRIORITY_KEYWORDS:
         for loc in config.LOCATIONS:
-            add(scrape_linkedin(kw, loc))
+            add(scrape_linkedin(kw, loc, since_seconds))
             _delay()
 
     # Company career sites

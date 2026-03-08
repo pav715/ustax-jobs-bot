@@ -1,32 +1,303 @@
-def _post(data):
+"""
+Telegram sender — formats and sends job posts to the channel.
+"""
+import requests
+import re
+import time
+from datetime import datetime, date
+import config
+
+API = f"https://api.telegram.org/bot{config.BOT_TOKEN}"
+
+
+def _escape(text):
+    """Escape Telegram Markdown v1 special characters."""
+    if not text:
+        return ""
+    for ch in ["_", "*", "`", "["]:
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
+def _post(text, chat_id=None):
+    cid = chat_id or config.CHAT_ID
+    if not cid:
+        print("[Telegram] CHAT_ID not set.")
+        return False
     try:
-        # Attempt to post data
-        response = requests.post(API_ENDPOINT, json=data)
-        response.raise_for_status()
-    except requests.exceptions.RequestException as e:
-        # Implement retry logic
-        for attempt in range(RETRY_COUNT):
-            try:
-                response = requests.post(API_ENDPOINT, json=data)
-                response.raise_for_status()
-                return response
-            except requests.exceptions.RequestException:
-                time.sleep(RETRY_DELAY)
-        # Log the failure after retries
-        logging.error(f"Failed to post data after {RETRY_COUNT} attempts: {e}")
-        return None
+        r = requests.post(
+            f"{API}/sendMessage",
+            json={
+                "chat_id":                  cid,
+                "text":                     text,
+                "parse_mode":               "Markdown",
+                "disable_web_page_preview": False,
+            },
+            timeout=15,
+        )
+        if r.status_code == 200:
+            return True
 
-def send_fail_alert(job):
-    logging.warning(f"Job failed: {job}")
-    # Enhance logging with more details
-    logging.info(f"Job details: {job.errors}")
-    # Consider additional notification methods or escalation
+        # Fallback: plain text
+        r2 = requests.post(
+            f"{API}/sendMessage",
+            json={
+                "chat_id":                  cid,
+                "text":                     re.sub(r"[*_`\[\]]", "", text),
+                "disable_web_page_preview": False,
+            },
+            timeout=15,
+        )
+        return r2.status_code == 200
 
-# New validation methods
+    except Exception as e:
+        print(f"[Telegram] Send error: {e}")
+        return False
 
-def validate_job_data(job_data):
-    if not job_data.get('id'):
-        raise ValueError("Missing job ID")
-    if not job_data.get('data'):
-        raise ValueError("No job data provided")
-    # Further validation rules can be added here
+
+def _urgency_tag(posted):
+    """Return urgency label based on posting date."""
+    if not posted:
+        return ""
+    try:
+        posted_date = date.fromisoformat(str(posted)[:10])
+        delta = (date.today() - posted_date).days
+        if delta == 0:
+            return "🔴 *URGENT — Posted Today!*\n"
+        elif delta == 1:
+            return "🟡 *Posted Yesterday*\n"
+    except Exception:
+        pass
+    return ""
+
+
+def _match_bar(score):
+    """Visual match score bar."""
+    if not score:
+        return ""
+    filled = round(score / 10)
+    bar = "█" * filled + "░" * (10 - filled)
+    if score >= 80:
+        label = "Excellent fit"
+    elif score >= 65:
+        label = "Good fit"
+    elif score >= 50:
+        label = "Moderate fit"
+    else:
+        label = "Low fit"
+    return f"🎯 *Match:* {score}% {bar} _{label}_\n"
+
+
+def _responsibilities(title, desc):
+    t = title.lower()
+    if desc and len(desc) > 80:
+        sents = [s.strip() for s in re.split(r'[.\n•\|\-–]', desc) if len(s.strip()) > 30]
+        sents = [s for s in sents if not re.match(r'^[\d\s,/-]+$', s)]
+        if len(sents) >= 3:
+            return sents[:5]
+    if any(x in t for x in ["qa", "quality", "e-file", "efile", "testing"]):
+        return [
+            "Perform QA testing for US tax software (1040, 1041, 1065, 1120 forms)",
+            "Test tax calculations and validate software outputs against IRS rules",
+            "Identify and report bugs, coordinate fixes with development teams",
+            "Create test scenarios and support e-file approvals with US state agencies",
+            "Ensure tax products meet compliance and quality standards",
+        ]
+    elif any(x in t for x in ["reviewer", "review"]):
+        return [
+            "Review US tax returns (1040, 1041, 1120, 1065) for accuracy and compliance",
+            "Identify errors and discrepancies in tax filings",
+            "Ensure all returns meet IRS and state filing requirements",
+            "Provide feedback and guidance to tax preparers",
+            "Maintain quality standards across all reviewed returns",
+        ]
+    elif any(x in t for x in ["preparer", "preparation"]):
+        return [
+            "Prepare and review US individual/business tax returns (1040, 1041, 1065, 1120)",
+            "Collect and organize client financial data for accurate tax filing",
+            "Ensure all returns comply with US federal and state tax laws",
+            "Research tax issues and advise on minimizing liabilities",
+            "Maintain records of all filings and track deadlines",
+        ]
+    elif any(x in t for x in ["analyst", "compliance", "regulatory"]):
+        return [
+            "Analyze US federal and state tax law changes and assess their impact",
+            "Prepare and submit ATS test scenarios to US state tax authorities",
+            "Coordinate with development teams to implement regulatory updates",
+            "Monitor IRS and state agency announcements for changes",
+            "Support compliance with US federal and state tax requirements",
+        ]
+    elif any(x in t for x in ["programmer", "developer", "software", "filing"]):
+        return [
+            "Develop and maintain US federal/state tax form software modules",
+            "Analyze EF schema and business rule changes for print and e-file",
+            "Liaise with government agencies to obtain annual form approvals",
+            "Troubleshoot and resolve production issues in tax software",
+            "Update XML schemas and business rules for compliance",
+        ]
+    elif any(x in t for x in ["senior", "manager", "lead"]):
+        return [
+            "Lead and mentor a team of US tax professionals",
+            "Oversee tax compliance, preparation and quality review processes",
+            "Review complex tax returns and regulatory submissions",
+            "Manage relationships with IRS and state tax authorities",
+            "Drive process improvements across tax operations",
+        ]
+    else:
+        return [
+            "Handle US tax preparation and compliance activities",
+            "Review and validate tax returns (1040, 1041, 1065, 1120)",
+            "Ensure accurate and timely filings per federal and state regulations",
+            "Coordinate with clients and internal teams on tax matters",
+            "Support e-file processes and IRS/state authority submissions",
+        ]
+
+
+def _skills(title, raw_skills):
+    if raw_skills and len(raw_skills) > 10:
+        return raw_skills
+    t = title.lower()
+    if any(x in t for x in ["qa", "quality", "testing", "e-file"]):
+        return "US Tax knowledge, QA testing, XML/HTML, Analytical skills"
+    elif any(x in t for x in ["preparer", "preparation"]):
+        return "US Tax preparation, 1040/1041/1065/1120, Tax software, MS Excel"
+    elif any(x in t for x in ["software", "programmer", "developer"]):
+        return "Tax software, XML/XSD schemas, ATS testing, US Tax regulations"
+    elif any(x in t for x in ["analyst", "compliance"]):
+        return "US Tax, Federal/State regulations, IRS, Tax compliance, MS Excel"
+    else:
+        return "US Tax, Compliance, Tax software, Analytical skills, MS Excel"
+
+
+def _qualification(title):
+    t = title.lower()
+    if any(x in t for x in ["senior", "manager", "lead"]):
+        return "Graduate / Post-Graduate (Accounting / Finance / Commerce)"
+    elif any(x in t for x in ["software", "programmer", "developer"]):
+        return "B.Com / B.Tech / BCA (Computer / Accounting preferred)"
+    else:
+        return "Graduate / Post-Graduate (Accounting / Finance preferred)"
+
+
+def _experience(title, raw_exp):
+    if raw_exp and len(raw_exp) > 2:
+        return raw_exp
+    t = title.lower()
+    if any(x in t for x in ["senior", "manager", "lead"]):
+        return "5+ Years (US Tax / Accounting)"
+    elif any(x in t for x in ["associate", "junior", "jr"]):
+        return "1-2 Years (US Tax / Accounting)"
+    else:
+        return "2-5 Years (US Tax / Accounting)"
+
+
+def format_job(job):
+    title   = job.get("title", "")
+    company = job.get("company", "")
+    loc     = job.get("location", "India / Remote")
+    url     = job.get("url", "")
+    source  = job.get("source", "")
+    desc    = job.get("description", "")
+    posted  = job.get("posted", "")
+
+    bullets = job.get("_responsibilities") or _responsibilities(title, desc)
+    skills  = job.get("_skills")          or _skills(title, job.get("skills", ""))
+    qual    = job.get("_qualification")   or _qualification(title)
+    exp     = job.get("_experience")      or _experience(title, job.get("experience", ""))
+    salary  = job.get("_salary", "")
+    score   = job.get("_match_score", 0)
+    highlights = job.get("_match_highlights", [])
+
+    # Location formatting
+    if "remote" in loc.lower():
+        loc_str = f"{loc} (Remote)"
+    elif "hyderabad" in loc.lower():
+        loc_str = "Hyderabad (Hybrid)"
+    else:
+        loc_str = loc
+
+    safe_company = _escape(company)
+    safe_title   = _escape(title)
+    safe_loc     = _escape(loc_str)
+    safe_qual    = _escape(qual)
+    safe_exp     = _escape(exp)
+    safe_skills  = _escape(skills)
+
+    lines = []
+
+    # Urgency tag
+    urgency = _urgency_tag(posted)
+    if urgency:
+        lines.append(urgency.strip())
+        lines.append("")
+
+    # Header
+    lines += [
+        f"🔥 *Job Opportunity at {safe_company}*",
+        "",
+        f"💼 *Role:* {safe_title}",
+        f"📍 *Location:* {safe_loc}",
+        f"🎓 *Qualification:* {safe_qual}",
+        f"👨‍💻 *Experience:* {safe_exp}",
+    ]
+
+    # Salary (if mentioned)
+    if salary and salary.lower() not in ("not mentioned", ""):
+        lines.append(f"💰 *Salary:* {_escape(salary)}")
+
+    lines += [
+        "",
+        f"🔗 *Apply Here:*\n{url}",
+    ]
+    if source:
+        lines.append(f"\n📋 _{_escape(source)}_")
+
+    return "\n".join(lines)
+
+
+def send_job(job):
+    msg = format_job(job)
+    ok  = _post(msg)
+    if ok:
+        time.sleep(2)
+    return ok
+
+
+def send_daily_summary(stats):
+    """Send daily summary at 9 AM IST."""
+    today    = stats.get("date", date.today().isoformat())
+    sent     = stats.get("sent", 0)
+    companies = stats.get("companies", {})
+
+    lines = [
+        "📊 *US Tax Jobs — Daily Summary*",
+        f"📅 {today}",
+        "",
+        f"✅ *Jobs sent today:* {sent}",
+        f"🏢 *Companies hired:* {len(companies)}",
+    ]
+
+    if companies:
+        top = sorted(companies.items(), key=lambda x: x[1], reverse=True)[:5]
+        lines.append("\n🏆 *Top Companies:*")
+        for co, cnt in top:
+            lines.append(f"  • {_escape(co)} — {cnt} job{'s' if cnt > 1 else ''}")
+
+    lines += [
+        "",
+        "⏱ Bot checks every *10 minutes*",
+        f"🕐 {datetime.now().strftime('%d %b %Y %H:%M IST')}",
+    ]
+
+    _post("\n".join(lines))
+
+
+def send_fail_alert(error_msg=""):
+    """Send alert if bot encounters a critical error."""
+    msg = (
+        "❌ *US Tax Jobs Bot — Error*\n\n"
+        f"Something went wrong:\n`{_escape(str(error_msg)[:200])}`\n\n"
+        "Please check GitHub Actions logs.\n"
+        f"🕐 {datetime.now().strftime('%d %b %Y %H:%M')}"
+    )
+    _post(msg)
