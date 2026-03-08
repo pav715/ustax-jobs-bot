@@ -64,13 +64,24 @@ KEYWORDS = [
 
 # ── Locations ─────────────────────────────────────────────────────────
 LOCATIONS = [
+    # Maharashtra
+    "Mumbai",
+    "Pune",
+    "Nagpur",
+    # Telangana
     "Hyderabad",
+    # Karnataka
     "Bangalore",
     "Bengaluru",
+    # Tamil Nadu
     "Chennai",
-    "Tamil Nadu",
-    "Kerala",
-    "Remote",
+    "Coimbatore",
+    # Kerala
+    "Kochi",
+    "Thiruvananthapuram",
+    # Andhra Pradesh
+    "Visakhapatnam",
+    "Vijayawada",
 ]
 
 # ── Timing ────────────────────────────────────────────────────────────
@@ -78,11 +89,44 @@ CHECK_INTERVAL_MINUTES = 5   # GitHub Actions cron: every 5 minutes
 
 # ── Your Profile (used by AI for match scoring) ───────────────────────
 USER_PROFILE = (
-    "6 years US Tax experience: Tax Preparer → H&R Block → Thomson Reuters → "
-    "Intuit (current: Filing Product Programmer 2). "
-    "Skills: 1040, 1041, 1120, 1065, 990, 5500, IRS, XML/XSD schemas, "
-    "ATS acceptance testing, E-file approvals, Tax software development, Python. "
-    "Location: Hyderabad, India. Education: B.Com Computer 2019."
+    # Experience: ~5.5 years in US Tax / Tax Software QA
+    "Total Experience: 5 years 6 months in US Taxation and Tax Software QA/E-File. "
+
+    # Current Role
+    "Current: Filing Product Programmer 2 at Intuit (Sept 2024–Present), Hyderabad. "
+    "Responsibilities: ATS test case preparation and submission to US State Authorities; "
+    "comprehensive testing of Lacerte and ProSeries tax software; XML/XSD/EF schema analysis; "
+    "tax form editing (state and federal); government liaison with state agencies; "
+    "BRMS business rules implementation; production bug resolution (print and e-file). "
+
+    # Previous: Thomson Reuters
+    "Previous: Quality Assurance & E-File Analyst at Thomson Reuters (May 2022–Sept 2024, 2yr 5mo). "
+    "Responsibilities: ATS submissions for 1041 (HI, IN, ME, NJ, WV) and 990 (FL) forms; "
+    "Go-Systems software testing; XML/XSD schema updates; bug management via Visual Studio; "
+    "Created BRMS Logic Writer AI chain — featured in Thomson Reuters All Company community. "
+    "Awards: Surge Award 2024, Shine Award 2023 & 2024, Ignite Award 2022. "
+
+    # Previous: H&R Block
+    "Previous: Jr. Associate Regulatory Analyst at H&R Block India (Oct 2020–Mar 2022, 1yr 6mo). "
+    "Responsibilities: Monitoring state and federal US tax regulatory changes; "
+    "updating tax software for compliance; testing software updates; regulatory documentation. "
+
+    # First role
+    "Previous: US Tax Preparer at Advantage One Tax Consulting Inc. (Oct 2019–Apr 2020, 7mo). "
+    "Responsibilities: Preparing individual tax returns, client interaction, e-filing, compliance. "
+
+    # Key technical skills
+    "Technical Skills: ATS acceptance testing, XML/XSD schemas, EF schema analysis, "
+    "Go-Systems, Lacerte, ProSeries, BRMS, Visual Studio, AI chain development, Python. "
+    "Tax Forms: 1041 (Fiduciary), 990 (Exempt Org), 1040 (Individual), state/federal forms. "
+    "Domains: Tax software QA, e-file compliance, regulatory analysis, government liaison. "
+
+    # Education
+    "Education: B.Com (Computer Applications), St. Francis Xavier Degree College, 2019. "
+
+    # Location & preferences
+    "Location: Hyderabad, Telangana, India. "
+    "Open to: On-site / Hybrid roles in Hyderabad, Bangalore, Chennai, Mumbai, Pune or South India."
 )
 
 # Only send jobs where AI match score >= this value (0 = send all)

@@ -73,7 +73,7 @@ BLOCKLIST = re.compile(
     re.IGNORECASE,
 )
 
-# ── Location filter — India / Remote only ─────────────────────────────
+# ── Location filter — South India only ───────────────────────────────
 USA_LOCATION = re.compile(
     r"\b(usa|united\s*states?|u\.s\.a?\.?|"
     r"new\s*york|california|texas|florida|illinois|washington\s*dc|"
@@ -84,22 +84,59 @@ USA_LOCATION = re.compile(
     re.IGNORECASE,
 )
 
-INDIA_LOCATION_FILTER = re.compile(
-    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|"
-    r"delhi|gurugram|gurgaon|noida|kerala|tamil|remote|work\s*from\s*home",
+# Non-South-India locations to explicitly block
+NON_SOUTH_INDIA = re.compile(
+    r"delhi|new\s*delhi|noida|gurgaon|gurugram|faridabad|"  # Delhi NCR
+    r"kolkata|west\s*bengal|"                               # West Bengal
+    r"ahmedabad|surat|gujarat|"                             # Gujarat
+    r"lucknow|kanpur|uttar\s*pradesh|"                      # Uttar Pradesh
+    r"jaipur|rajasthan|"                                    # Rajasthan
+    r"bhopal|indore|madhya\s*pradesh|"                      # Madhya Pradesh
+    r"chandigarh|punjab|haryana|"                           # Punjab/Haryana
+    r"bhubaneswar|odisha|"                                  # Odisha
+    r"patna|bihar|"                                         # Bihar
+    r"guwahati|assam",                                      # Assam
+    re.IGNORECASE,
+)
+
+SOUTH_INDIA_LOCATION = re.compile(
+    r"mumbai|nagpur|pune|nashik|aurangabad|maharashtra|"                  # Maharashtra
+    r"hyderabad|secunderabad|warangal|telangana|"                         # Telangana
+    r"bangalore|bengaluru|mysore|mysuru|hubli|mangalore|mangaluru|"       # Karnataka
+    r"belagavi|karnataka|"
+    r"chennai|coimbatore|madurai|trichy|tiruchirappalli|salem|"           # Tamil Nadu
+    r"tirunelveli|vellore|erode|tamilnadu|tamil\s*nadu|"
+    r"kochi|cochin|trivandrum|thiruvananthapuram|kozhikode|calicut|"      # Kerala
+    r"thrissur|kollam|kannur|kerala|"
+    r"visakhapatnam|vizag|vijayawada|amaravati|tirupati|guntur|nellore|"  # Andhra Pradesh
+    r"kakinada|andhra|"
+    r"puducherry|pondicherry",                                             # Puducherry
     re.IGNORECASE,
 )
 
 
 def is_india_job(job):
-    """Return True only if job is in India or Remote — never USA."""
+    """Return True only for South India office jobs — no Remote, no North/West India, no USA."""
     loc = job.get("location", "")
+    # Reject USA
     if USA_LOCATION.search(loc):
         return False
-    if INDIA_LOCATION_FILTER.search(loc):
+    # Allow Remote/WFH only if location also mentions India
+    is_remote = bool(re.search(r"\bremote\b|work\s*from\s*home|\bwfh\b", loc, re.IGNORECASE))
+    if is_remote:
+        if re.search(r"\bindia\b", loc, re.IGNORECASE):
+            return True   # "Remote - India" or "India (Remote)" → accept
+        return False      # "Remote" with no India mention → reject (could be US/global)
+    # Reject non-South-India cities explicitly
+    if NON_SOUTH_INDIA.search(loc):
+        return False
+    # Accept South Indian cities/states
+    if SOUTH_INDIA_LOCATION.search(loc):
         return True
-    # Empty/unknown location — accept (Workday India context)
-    return True
+    # Empty/blank location — accept (India-based portals don't always specify city)
+    if not loc.strip():
+        return True
+    return False
 
 
 def is_us_tax_job(job):
@@ -384,20 +421,46 @@ def extract_qualification(desc, title):
 
 
 # ── Seen jobs ─────────────────────────────────────────────────────────
+# seen = dict of {job_id: "YYYY-MM-DD"}
+# Same job sent once per day — if reposted tomorrow, it's sent again.
+
 def load_seen():
+    today = date.today().isoformat()
     if os.path.exists(SEEN_FILE):
         try:
             with open(SEEN_FILE, "r") as f:
-                return set(json.load(f))
+                data = json.load(f)
+            # Support old format (plain list) — migrate to dict
+            if isinstance(data, list):
+                return {jid: today for jid in data}
+            if isinstance(data, dict):
+                return data
         except Exception:
             pass
-    return set()
+    return {}
 
 
-def save_seen(seen_set):
-    data = list(seen_set)[-5000:]
+def save_seen(seen_dict):
+    # Keep only last 90 days to prevent the file growing forever
+    cutoff = date.today().isoformat()[:7]   # keep current month + previous
+    pruned = {k: v for k, v in seen_dict.items()
+              if isinstance(v, str) and v[:7] >= cutoff}
+    # Always keep at most 10000 entries
+    if len(pruned) > 10000:
+        pruned = dict(list(pruned.items())[-10000:])
     with open(SEEN_FILE, "w") as f:
-        json.dump(data, f)
+        json.dump(pruned, f)
+
+
+def already_seen_today(seen_dict, job_id):
+    """Return True if this job was already sent TODAY."""
+    today = date.today().isoformat()
+    return seen_dict.get(job_id) == today
+
+
+def mark_seen(seen_dict, job_id):
+    """Mark job as seen for today."""
+    seen_dict[job_id] = date.today().isoformat()
 
 
 def log(msg):
@@ -456,7 +519,8 @@ def main():
         save_stats(stats)
 
     seen = load_seen()
-    log(f"Loaded {len(seen)} previously seen jobs.")
+    today = date.today().isoformat()
+    log(f"Loaded {len(seen)} seen entries. Today: {today}")
 
     try:
         jobs = fetch_all_jobs(since_seconds=since_seconds)
@@ -469,22 +533,21 @@ def main():
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
 
-    # Filter: India / Remote only — drop any USA-located jobs
+    # Filter: South India / Maharashtra / India-Remote only
     us_tax_jobs = [j for j in us_tax_jobs if is_india_job(j)]
-    log(f"India/Remote only: {len(us_tax_jobs)} jobs after location filter.")
+    log(f"Location filter: {len(us_tax_jobs)} jobs remaining.")
 
     # ── SEED MODE ─────────────────────────────────────────────────────────
-    # First run (seen_jobs.json empty) OR SEED_MODE=true from GitHub Actions:
-    # Mark all current jobs as seen WITHOUT sending any.
-    # This sets "right now" as baseline → next run sends only NEW jobs.
+    # First run (seen empty) OR SEED_MODE=true: mark all current jobs as seen
+    # for today without sending — next run (5 min later) sends only NEW jobs.
     seed_mode = os.environ.get("SEED_MODE", "false").lower() == "true"
     first_run  = (len(seen) == 0 and not state.get("first_run_done"))
 
     if seed_mode or first_run:
         reason = "SEED_MODE triggered" if seed_mode else "first run — fresh start"
-        log(f"Seeding ({reason}): marking {len(us_tax_jobs)} jobs as seen. Nothing sent.")
+        log(f"Seeding ({reason}): marking {len(us_tax_jobs)} jobs as seen for today.")
         for j in us_tax_jobs:
-            seen.add(j["id"])
+            mark_seen(seen, j["id"])
         save_seen(seen)
         state["first_run_done"] = True
         save_state(state)
@@ -494,10 +557,10 @@ def main():
     state["first_run_done"] = True
     save_state(state)
 
-    # New jobs only — sorted oldest-first so channel shows newest at top
-    new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]
+    # New jobs = not seen today (jobs seen on previous days are allowed again)
+    new_jobs = [j for j in us_tax_jobs if not already_seen_today(seen, j["id"])]
     new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
-    log(f"New jobs to send: {len(new_jobs)}")
+    log(f"New jobs to send today: {len(new_jobs)}")
 
     if not new_jobs:
         log("No new US Tax jobs this cycle.")
@@ -533,14 +596,14 @@ def main():
         # Step 4: drop AI-rejected jobs
         if job.get("_ai_rejected"):
             log(f"  [AI] Rejected (not US Tax): {title}")
-            seen.add(job["id"])
+            mark_seen(seen, job["id"])
             continue
 
         # Step 5: drop low match score jobs
         score = job.get("_match_score", 100)
         if use_ai and score < config.MIN_MATCH_SCORE:
             log(f"  [AI] Low match ({score}%): {title}")
-            seen.add(job["id"])
+            mark_seen(seen, job["id"])
             continue
 
         enriched.append(job)
@@ -553,7 +616,7 @@ def main():
         try:
             ok = send_job(job)
             if ok:
-                seen.add(job["id"])
+                mark_seen(seen, job["id"])
                 sent += 1
                 update_stats(stats, job)
                 log(f"  Sent [{job.get('_match_score', '?')}%]: {job['title']} @ {job['company']}")
