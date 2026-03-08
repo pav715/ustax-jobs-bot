@@ -1,8 +1,8 @@
 """
 Single-cycle runner for GitHub Actions.
 Fetches jobs, enriches with real description, filters US Tax only,
-sends to Telegram with actual job info (not generic defaults).
-AI-powered extraction via Google Gemini Flash (free tier).
+sends to Telegram with actual job info.
+AI-powered via Google Gemini Flash (free tier).
 """
 import json
 import os
@@ -10,12 +10,12 @@ import re
 import time
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, date
 import config
 from scraper import fetch_all_jobs, SESSION
-from sender import send_job
+from sender import send_job, send_daily_summary, send_fail_alert, send_and_pin_welcome
 
-# ── Gemini AI setup (optional — graceful fallback if key not set) ─────
+# ── Gemini AI setup ───────────────────────────────────────────────────
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
 _gemini_model = None
 
@@ -24,17 +24,21 @@ def _get_gemini():
     if _gemini_model:
         return _gemini_model
     if not GEMINI_KEY:
+        print("[AI] GEMINI_API_KEY not set — AI enrichment disabled.")
         return None
     try:
         import google.generativeai as genai
         genai.configure(api_key=GEMINI_KEY)
-        _gemini_model = genai.GenerativeModel("gemini-2.0-flash")
+        _gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+        print("[AI] Gemini 1.5 Flash initialized successfully.")
         return _gemini_model
     except Exception as e:
-        print(f"[AI] Gemini init failed: {e}")
+        print(f"[AI] Gemini init FAILED: {e}")
         return None
 
-SEEN_FILE = "seen_jobs.json"
+SEEN_FILE      = "seen_jobs.json"
+STATS_FILE     = "stats.json"
+STATE_FILE     = "bot_state.json"
 
 # ── US Tax relevance filter ───────────────────────────────────────────
 US_TAX_TERMS = re.compile(
@@ -81,13 +85,133 @@ def is_us_tax_job(job):
     return True
 
 
+# ── Bot state (pause/resume) ──────────────────────────────────────────
+def load_state():
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {"paused": False, "last_update_id": 0, "last_run_at": "", "welcome_pinned": False}
+
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
+
+
+# ── Daily stats ───────────────────────────────────────────────────────
+def load_stats():
+    today = date.today().isoformat()
+    if os.path.exists(STATS_FILE):
+        try:
+            with open(STATS_FILE) as f:
+                s = json.load(f)
+            if s.get("date") == today:
+                return s
+        except Exception:
+            pass
+    return {"date": today, "sent": 0, "companies": {}, "summary_sent": False}
+
+
+def save_stats(stats):
+    with open(STATS_FILE, "w") as f:
+        json.dump(stats, f)
+
+
+def update_stats(stats, job):
+    stats["sent"] += 1
+    company = job.get("company", "Other")
+    stats["companies"][company] = stats["companies"].get(company, 0) + 1
+
+
+# ── Telegram command handler ──────────────────────────────────────────
+def handle_commands(state, stats):
+    """Check for Telegram commands and respond."""
+    if not config.BOT_TOKEN:
+        return state
+
+    try:
+        offset = state.get("last_update_id", 0) + 1
+        r = requests.get(
+            f"https://api.telegram.org/bot{config.BOT_TOKEN}/getUpdates",
+            params={"offset": offset, "timeout": 5, "limit": 10},
+            timeout=10,
+        )
+        if r.status_code != 200:
+            return state
+
+        updates = r.json().get("result", [])
+        for update in updates:
+            state["last_update_id"] = update["update_id"]
+            msg = (update.get("message") or update.get("channel_post") or {})
+            text = msg.get("text", "").strip().lower()
+            chat_id = str(msg.get("chat", {}).get("id", ""))
+
+            if not chat_id:
+                continue
+
+            api = f"https://api.telegram.org/bot{config.BOT_TOKEN}/sendMessage"
+
+            if text == "/status" or text.startswith("/status"):
+                reply = (
+                    f"🤖 *US Tax Jobs Bot — Status*\n\n"
+                    f"{'⏸ PAUSED' if state.get('paused') else '✅ RUNNING'}\n\n"
+                    f"📊 *Today ({stats['date']}):*\n"
+                    f"• Jobs sent: *{stats['sent']}*\n"
+                    f"• Companies: *{len(stats['companies'])}*\n"
+                    f"⏱ Checks every *5 minutes*\n"
+                    f"🕐 {datetime.now().strftime('%d %b %Y %H:%M IST')}"
+                )
+                requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
+
+            elif text == "/pause":
+                state["paused"] = True
+                requests.post(api, json={
+                    "chat_id": chat_id,
+                    "text": "⏸ *Bot paused.* Send /resume to restart notifications.",
+                    "parse_mode": "Markdown"
+                }, timeout=10)
+
+            elif text == "/resume":
+                state["paused"] = False
+                requests.post(api, json={
+                    "chat_id": chat_id,
+                    "text": "▶️ *Bot resumed.* Notifications are back on.",
+                    "parse_mode": "Markdown"
+                }, timeout=10)
+
+            elif text == "/top":
+                if stats["companies"]:
+                    top = sorted(stats["companies"].items(), key=lambda x: x[1], reverse=True)[:5]
+                    lines = ["🏆 *Top Hiring Companies Today:*\n"]
+                    for i, (co, cnt) in enumerate(top, 1):
+                        lines.append(f"{i}. {co} — {cnt} job{'s' if cnt > 1 else ''}")
+                    reply = "\n".join(lines)
+                else:
+                    reply = "📭 No jobs sent yet today."
+                requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
+
+            elif text == "/help":
+                reply = (
+                    "🤖 *US Tax Jobs Bot — Commands*\n\n"
+                    "/status — Bot status & today's count\n"
+                    "/pause — Pause job notifications\n"
+                    "/resume — Resume notifications\n"
+                    "/top — Top hiring companies today\n"
+                    "/help — Show this help"
+                )
+                requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
+
+    except Exception as e:
+        log(f"[Commands] Error: {e}")
+
+    return state
+
+
 # ── Fetch real job description ────────────────────────────────────────
 def enrich_job(job):
-    """
-    Fetch the actual job description from the job page.
-    Supports LinkedIn guest API. Falls back to existing description.
-    """
-    # Skip if already has good description
     if job.get("description") and len(job["description"]) > 300:
         return job
 
@@ -96,7 +220,6 @@ def enrich_job(job):
 
     try:
         if "linkedin.com" in url:
-            # Extract LinkedIn job ID from URL
             match = re.search(r'/(\d{8,})', url)
             if match:
                 jid        = match.group(1)
@@ -104,7 +227,6 @@ def enrich_job(job):
                 r = SESSION.get(detail_url, timeout=12)
                 if r.status_code == 200:
                     soup = BeautifulSoup(r.content, "html.parser")
-                    # Full description div
                     desc_div = (
                         soup.find("div", class_=re.compile(r"show-more-less-html|description__text")) or
                         soup.find("section", class_=re.compile(r"description"))
@@ -112,32 +234,23 @@ def enrich_job(job):
                     if desc_div:
                         job["description"] = desc_div.get_text(" ", strip=True)[:2000]
 
-                    # Try to extract experience from criteria
                     criteria = soup.find_all("span", class_=re.compile(r"description__job-criteria-text"))
-                    for i, c in enumerate(criteria):
+                    for c in criteria:
                         text = c.get_text(strip=True)
                         if re.search(r"year|experience|mid|senior|entry", text, re.IGNORECASE):
                             if not job.get("experience") or len(job["experience"]) < 3:
                                 job["experience"] = text
 
-        elif "naukri.com" in url:
-            r = SESSION.get(url, timeout=12)
-            if r.status_code == 200:
-                soup = BeautifulSoup(r.content, "html.parser")
-                desc_div = soup.find("div", class_=re.compile(r"job-desc|jobDescription|dang-inner-html"))
-                if desc_div:
-                    job["description"] = desc_div.get_text(" ", strip=True)[:2000]
-
     except Exception as e:
-        print(f"  [Enrich] {source} error: {e}")
+        log(f"  [Enrich] {source} error: {e}")
 
     time.sleep(1.5)
     return job
 
 
-# ── AI enrichment (Gemini Flash — free 1500 req/day) ─────────────────
+# ── AI enrichment ─────────────────────────────────────────────────────
 def ai_enrich_job(job):
-    """Use Gemini Flash to extract real job info from actual description."""
+    """Gemini Flash: extract job info + match score against candidate profile."""
     model = _get_gemini()
     if not model:
         return job
@@ -145,36 +258,39 @@ def ai_enrich_job(job):
     title = job.get("title", "")
     desc  = job.get("description", "")
 
-    # Only use AI if we have a real description to work with
     if not desc or len(desc) < 100:
         return job
 
-    prompt = f"""You are a job posting analyst. Extract info from this US Tax job posting.
+    prompt = f"""You are a US Tax recruitment expert. Analyze this job posting and score it against the candidate profile.
 
 Job Title: {title}
 Job Description: {desc[:2500]}
 
-Return ONLY a valid JSON object — no markdown, no explanation:
+Candidate Profile:
+{config.USER_PROFILE}
+
+Return ONLY valid JSON — no markdown, no explanation:
 {{
-  "responsibilities": ["point 1", "point 2", "point 3", "point 4", "point 5"],
-  "skills": "skill1, skill2, skill3, skill4, skill5",
-  "experience": "X-Y Years in US Tax / specific area",
-  "qualification": "degree or certification required",
+  "experience": "X-Y Years in specific area",
+  "qualification": "exact degree/certification from job",
+  "salary": "salary range if mentioned, else Not mentioned",
+  "match_score": 85,
+  "match_highlights": ["reason this matches candidate", "another strength"],
   "is_us_tax_job": true
 }}
 
 Rules:
-- responsibilities: 5 specific bullets copied from this actual job (not generic)
-- skills: extract real tools/knowledge (e.g. 1040, CCH, ProSeries, IRS, XML)
-- experience: exact years from the description, or infer from seniority level
-- qualification: B.Com / CA / CPA / MBA etc. from description
-- is_us_tax_job: true if job involves US federal/state tax forms or IRS compliance"""
+- experience: exact years mentioned or infer from seniority
+- qualification: B.Com / CA / CPA / MBA as stated in job
+- salary: extract if mentioned (e.g. "12-18 LPA"), else "Not mentioned"
+- match_score: 0-100 based on how well candidate profile matches this job
+- match_highlights: 2-3 reasons why candidate is a good/poor fit
+- is_us_tax_job: true only if job involves US federal/state tax (IRS, 1040, 1041 etc.)"""
 
     try:
         response = model.generate_content(prompt)
         text = response.text.strip()
 
-        # Strip markdown code fences if Gemini wraps in ```json ... ```
         if "```" in text:
             text = text.split("```")[1]
             if text.startswith("json"):
@@ -183,48 +299,29 @@ Rules:
 
         data = json.loads(text)
 
-        if data.get("responsibilities"):
-            job["_responsibilities"] = [r for r in data["responsibilities"] if r][:5]
-        if data.get("skills"):
-            job["_skills"] = data["skills"]
         if data.get("experience"):
             job["_experience"] = data["experience"]
         if data.get("qualification"):
             job["_qualification"] = data["qualification"]
-        # Let AI override the US Tax filter if it says false
+        if data.get("salary"):
+            job["_salary"] = data["salary"]
+        if data.get("match_score") is not None:
+            job["_match_score"] = int(data["match_score"])
+        if data.get("match_highlights"):
+            job["_match_highlights"] = data["match_highlights"]
         if data.get("is_us_tax_job") is False:
             job["_ai_rejected"] = True
 
-        log(f"  [AI] Enriched: {title[:55]}")
+        log(f"  [AI] {title[:45]} | Match: {job.get('_match_score', '?')}% | Salary: {job.get('_salary', '?')}")
 
     except Exception as e:
-        log(f"  [AI] Skipped '{title[:45]}': {e}")
+        log(f"  [AI] Skipped '{title[:40]}': {e}")
 
-    time.sleep(1)   # respect Gemini free-tier rate limit (15 RPM)
+    time.sleep(1)
     return job
 
 
-# ── Description parsers ───────────────────────────────────────────────
-def extract_section(desc, *headers):
-    """Extract bullet points under a section header from job description."""
-    for header in headers:
-        pattern = re.compile(
-            rf"{header}\s*:?\s*\n(.*?)(?=\n[A-Z][^\n]{{3,}}:|\Z)",
-            re.IGNORECASE | re.DOTALL
-        )
-        match = pattern.search(desc)
-        if match:
-            block = match.group(1)
-            lines = [l.strip().lstrip("•·-–*▪►") .strip()
-                     for l in re.split(r"[\n•·\|]", block) if len(l.strip()) > 20]
-            if lines:
-                return lines[:5]
-    return []
-
-
 def extract_experience(desc, title):
-    """Extract years of experience from description."""
-    # Look for patterns like "3+ years", "2-5 years", "minimum 3 years"
     patterns = [
         r"(\d+\+?\s*(?:to|-)\s*\d*\+?\s*years?\s*(?:of\s*)?(?:experience|exp)?[^\n.]*)",
         r"((?:minimum|min\.?|atleast|at\s*least)\s*\d+\+?\s*years?[^\n.]*)",
@@ -234,8 +331,6 @@ def extract_experience(desc, title):
         m = re.search(p, desc, re.IGNORECASE)
         if m:
             return m.group(1).strip()[:100]
-
-    # Fallback based on title
     t = title.lower()
     if any(x in t for x in ["senior", "manager", "lead"]):
         return "5+ Years (US Tax)"
@@ -244,116 +339,7 @@ def extract_experience(desc, title):
     return "2-5 Years (US Tax)"
 
 
-def extract_skills(desc, title, raw_skills):
-    """Extract skills from description."""
-    if raw_skills and len(raw_skills) > 15:
-        return raw_skills
-
-    # Look for skills section in description
-    skills_section = extract_section(desc,
-        "skills", "required skills", "key skills",
-        "technical skills", "qualifications", "requirements"
-    )
-    if skills_section:
-        return ", ".join(skills_section[:4])
-
-    # Look for skill keywords in description
-    skill_terms = re.findall(
-        r"\b(1040|1041|1120|1065|990|5500|"
-        r"US Tax|IRS|federal tax|state tax|"
-        r"tax software|MS Excel|QuickBooks|Lacerte|ProSeries|"
-        r"CCH|GoSystem|UltraTax|Drake|"
-        r"XML|XSD|e-file|ATS testing|"
-        r"tax compliance|tax research|CPA|EA)\b",
-        desc, re.IGNORECASE
-    )
-    if skill_terms:
-        unique = list(dict.fromkeys([s.strip() for s in skill_terms]))
-        return ", ".join(unique[:6])
-
-    # Fallback
-    t = title.lower()
-    if any(x in t for x in ["preparer", "preparation"]):
-        return "US Tax preparation, 1040/1041/1065/1120, Tax software, MS Excel"
-    elif any(x in t for x in ["analyst", "compliance"]):
-        return "US Tax, Federal/State regulations, IRS, Tax compliance, MS Excel"
-    elif any(x in t for x in ["software", "testing", "qa"]):
-        return "US Tax knowledge, Tax software, XML/XSD, ATS testing, QA"
-    return "US Tax, Tax compliance, MS Excel, Analytical skills"
-
-
-def extract_responsibilities(desc, title):
-    """Extract actual responsibilities from description."""
-    if desc and len(desc) > 100:
-        # Try to find responsibilities section
-        bullets = extract_section(desc,
-            "responsibilities", "roles and responsibilities",
-            "key responsibilities", "job responsibilities",
-            "duties", "what you will do", "your role"
-        )
-        if bullets:
-            return bullets
-
-        # If no section found, split desc into meaningful sentences
-        sents = [s.strip() for s in re.split(r"[.\n•·\|–-]", desc)
-                 if len(s.strip()) > 35 and not re.match(r'^[\d\s,/-]+$', s.strip())]
-        if len(sents) >= 3:
-            return sents[:5]
-
-    # Fallback by role
-    t = title.lower()
-    if any(x in t for x in ["preparer", "preparation"]):
-        return [
-            "Prepare US individual and business tax returns (1040, 1041, 1065, 1120)",
-            "Collect client financial data and ensure accuracy of tax filings",
-            "Ensure compliance with IRS and state tax regulations",
-            "Research tax issues and advise on minimizing tax liability",
-            "Track filing deadlines and maintain complete tax records",
-        ]
-    elif any(x in t for x in ["reviewer", "review"]):
-        return [
-            "Review US tax returns (1040, 1041, 1120, 1065) for accuracy and compliance",
-            "Identify errors and discrepancies in tax filings",
-            "Ensure all returns meet IRS and state filing requirements",
-            "Provide feedback and guidance to preparers",
-            "Maintain quality standards across all reviewed returns",
-        ]
-    elif any(x in t for x in ["analyst", "compliance", "regulatory"]):
-        return [
-            "Analyze US federal and state tax law changes and assess their impact",
-            "Prepare and submit ATS test scenarios to state tax authorities",
-            "Coordinate with development teams on regulatory updates",
-            "Monitor IRS and state agency announcements for changes",
-            "Support compliance with US federal and state tax requirements",
-        ]
-    elif any(x in t for x in ["software", "testing", "qa", "e-file", "efile"]):
-        return [
-            "Test US tax software for 1040, 1041, 1065, 1120 form accuracy",
-            "Validate tax calculations against IRS rules and state requirements",
-            "Create and execute test scenarios for e-file and print submissions",
-            "Identify and report defects, coordinate fixes with development",
-            "Support government agency approvals and ATS acceptance testing",
-        ]
-    elif any(x in t for x in ["senior", "manager", "lead"]):
-        return [
-            "Lead and mentor a team of US tax professionals",
-            "Oversee tax compliance, preparation and quality review processes",
-            "Review complex tax returns and regulatory submissions",
-            "Manage relationships with IRS and state tax authorities",
-            "Drive process improvements across tax operations",
-        ]
-    else:
-        return [
-            "Handle US tax preparation and compliance activities",
-            "Review and validate tax returns (1040, 1041, 1065, 1120)",
-            "Ensure accurate and timely filings per federal and state regulations",
-            "Coordinate with clients and internal teams on tax matters",
-            "Support e-file processes and IRS/state authority submissions",
-        ]
-
-
 def extract_qualification(desc, title):
-    """Extract qualification from description."""
     qual_match = re.search(
         r"(B\.?Com|B\.?Tech|MBA|CA|CPA|EA|Bachelor|Master|Graduate|Post.?Graduate)"
         r"[^\n.]{0,80}",
@@ -361,7 +347,6 @@ def extract_qualification(desc, title):
     )
     if qual_match:
         return qual_match.group(0).strip()[:120]
-
     t = title.lower()
     if any(x in t for x in ["senior", "manager", "lead"]):
         return "Graduate / Post-Graduate (Accounting / Finance / Commerce)"
@@ -405,20 +390,98 @@ def main():
         log("ERROR: CHAT_ID not set.")
         return
 
+    # Load state and stats
+    state = load_state()
+    stats = load_stats()
+
+    # ── Pin welcome message once (first run only) ─────────────────────
+    if not state.get("welcome_pinned"):
+        log("Pinning welcome message for the first time...")
+        ok = send_and_pin_welcome()
+        if ok:
+            state["welcome_pinned"] = True
+            save_state(state)
+
+    # Handle Telegram commands (/status, /pause, /resume, /top, /help)
+    state = handle_commands(state, stats)
+    save_state(state)
+
+    # Check if bot is paused
+    if state.get("paused"):
+        log("Bot is PAUSED. Send /resume to Telegram bot to restart.")
+        return
+
+    # Always fetch last 24 hours — seen_jobs.json handles deduplication
+    # Previous approach (dynamic 5-min window) caused jobs to be missed all day
+    now_utc = datetime.utcnow()
+    since_seconds = 86400
+    log(f"Fetch window: 24 hours (last run: {state.get('last_run_at') or 'never'})")
+
+    # Record this run time for stats/logging
+    state["last_run_at"] = now_utc.isoformat()
+    save_state(state)
+
+    # Daily summary at 9 AM IST (3:30 AM UTC)
+    if now_utc.hour == 3 and 30 <= now_utc.minute < 40 and not stats.get("summary_sent"):
+        send_daily_summary(stats)
+        stats["summary_sent"] = True
+        save_stats(stats)
+
     seen = load_seen()
     log(f"Loaded {len(seen)} previously seen jobs.")
 
     try:
-        jobs = fetch_all_jobs()
+        jobs = fetch_all_jobs(since_seconds=since_seconds)
     except Exception as e:
         log(f"Scrape error: {e}")
+        send_fail_alert(f"Scrape error: {e}")
         return
 
     # Filter: US Tax relevant only
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
 
-    # AUTO SEED: first run — mark all as seen, send nothing
+    # Filter: only today / recent jobs
+    # - LinkedIn ISO date  → compare to today's date string
+    # - Indeed/Naukri      → relative strings like "1 day ago", "Today", "Just posted" → always keep
+    # - No date on LinkedIn → drop (could be old)
+    # - No date on other sources → keep (no timestamp available)
+    today_str = date.today().isoformat()
+
+    # Matches relative date strings from Indeed, Naukri, Workday:
+    #   "Just posted", "Today", "Posted Today", "1 hour ago",
+    #   "Posted 0 Days Ago", "Posted 1 Days Ago"
+    _RECENT_RELATIVE = re.compile(
+        r"just\s*posted|posted\s*today|today|"
+        r"(\b[0-9]+\s*(hour|hr|minute|min|second)s?\s*(ago)?)|"
+        r"(posted\s*[01]\s*days?\s*ago)|"
+        r"(\b[01]\s*days?\s*ago)",
+        re.IGNORECASE,
+    )
+
+    today_jobs = []
+    for j in us_tax_jobs:
+        posted = str(j.get("posted", "")).strip()
+        source = j.get("source", "")
+        is_linkedin = source == "LinkedIn"
+
+        if not posted:
+            if is_linkedin:
+                continue   # LinkedIn job with no date — skip, could be old
+            else:
+                today_jobs.append(j)  # company site — no date available, include
+        elif _RECENT_RELATIVE.search(posted):
+            today_jobs.append(j)   # Indeed / Naukri relative text → recent
+        else:
+            try:
+                if str(posted)[:10] >= today_str:
+                    today_jobs.append(j)
+            except Exception:
+                today_jobs.append(j)
+    log(f"Today's jobs only: {len(today_jobs)} (filtered out {len(us_tax_jobs) - len(today_jobs)} older jobs)")
+    us_tax_jobs = today_jobs
+
+    # AUTO SEED: first run
     if len(seen) == 0 and len(us_tax_jobs) > 0:
         log("First run — seeding baseline. No messages sent.")
         for job in us_tax_jobs:
@@ -427,46 +490,59 @@ def main():
         log(f"Baseline set: {len(seen)} jobs. Next cycle sends only NEW jobs.")
         return
 
-    # New jobs only
+    # New jobs only — sorted oldest-first so channel shows newest at top
     new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]
+    new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
     log(f"New jobs to send: {len(new_jobs)}")
 
     if not new_jobs:
         log("No new US Tax jobs this cycle.")
         save_seen(seen)
+        save_stats(stats)
         return
 
-    # Enrich each new job with real description before sending
-    use_ai = bool(GEMINI_KEY)
-    log(f"Fetching real job descriptions... (AI {'ON' if use_ai else 'OFF — set GEMINI_API_KEY to enable'})")
+    # Cap to prevent spam
+    if len(new_jobs) > config.MAX_JOBS_PER_CYCLE:
+        log(f"Capping to {config.MAX_JOBS_PER_CYCLE} jobs this cycle.")
+        new_jobs = new_jobs[:config.MAX_JOBS_PER_CYCLE]
+
+    use_ai = _get_gemini() is not None
+    log(f"AI: {'ON (Gemini 1.5 Flash)' if use_ai else 'OFF — check GEMINI_API_KEY secret'}")
+
     enriched = []
     for job in new_jobs:
-        # Step 1: fetch actual description from LinkedIn
+        # Step 1: fetch real description
         job = enrich_job(job)
         desc  = job.get("description", "")
         title = job.get("title", "")
 
-        # Step 2: AI extraction (uses real desc → accurate results)
+        # Step 2: AI extraction + match score
         if use_ai:
             job = ai_enrich_job(job)
 
-        # Step 3: regex fallback for any fields AI didn't fill
-        if not job.get("_responsibilities"):
-            job["_responsibilities"] = extract_responsibilities(desc, title)
-        if not job.get("_skills"):
-            job["_skills"]           = extract_skills(desc, title, job.get("skills", ""))
+        # Step 3: regex fallback for fields still shown in message
         if not job.get("_experience"):
-            job["_experience"]       = extract_experience(desc, title)
+            job["_experience"]    = extract_experience(desc, title)
         if not job.get("_qualification"):
-            job["_qualification"]    = extract_qualification(desc, title)
+            job["_qualification"] = extract_qualification(desc, title)
 
-        # Step 4: drop jobs AI flagged as not US Tax related
+        # Step 4: drop AI-rejected jobs
         if job.get("_ai_rejected"):
             log(f"  [AI] Rejected (not US Tax): {title}")
-            seen.add(job["id"])   # mark seen so we don't recheck
+            seen.add(job["id"])
+            continue
+
+        # Step 5: drop low match score jobs
+        score = job.get("_match_score", 100)
+        if use_ai and score < config.MIN_MATCH_SCORE:
+            log(f"  [AI] Low match ({score}%): {title}")
+            seen.add(job["id"])
             continue
 
         enriched.append(job)
+
+    # Sort by match score (highest first)
+    enriched.sort(key=lambda j: j.get("_match_score", 0), reverse=True)
 
     sent = 0
     for job in enriched:
@@ -475,14 +551,16 @@ def main():
             if ok:
                 seen.add(job["id"])
                 sent += 1
-                log(f"  Sent: [{job['source']}] {job['title']} @ {job['company']}")
+                update_stats(stats, job)
+                log(f"  Sent [{job.get('_match_score', '?')}%]: {job['title']} @ {job['company']}")
             else:
                 log(f"  Failed: {job['title']}")
         except Exception as e:
             log(f"  Error: {e}")
 
     save_seen(seen)
-    log(f"Done. Sent {sent} new jobs. Total tracked: {len(seen)}")
+    save_stats(stats)
+    log(f"Done. Sent {sent} new jobs. Today total: {stats['sent']}. Tracked: {len(seen)}")
 
 
 if __name__ == "__main__":
