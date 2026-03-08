@@ -441,54 +441,8 @@ def main():
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
 
-    # Filter: only today / recent jobs
-    # - LinkedIn ISO date  → compare to today's date string
-    # - Indeed/Naukri      → relative strings like "1 day ago", "Today", "Just posted" → always keep
-    # - No date on LinkedIn → drop (could be old)
-    # - No date on other sources → keep (no timestamp available)
-    today_str = date.today().isoformat()
-
-    # Matches relative date strings from Indeed, Naukri, Workday:
-    #   "Just posted", "Today", "Posted Today", "1 hour ago",
-    #   "Posted 0 Days Ago", "Posted 1 Days Ago"
-    _RECENT_RELATIVE = re.compile(
-        r"just\s*posted|posted\s*today|today|"
-        r"(\b[0-9]+\s*(hour|hr|minute|min|second)s?\s*(ago)?)|"
-        r"(posted\s*[01]\s*days?\s*ago)|"
-        r"(\b[01]\s*days?\s*ago)",
-        re.IGNORECASE,
-    )
-
-    today_jobs = []
-    for j in us_tax_jobs:
-        posted = str(j.get("posted", "")).strip()
-        source = j.get("source", "")
-        is_linkedin = source == "LinkedIn"
-
-        if not posted:
-            if is_linkedin:
-                continue   # LinkedIn job with no date — skip, could be old
-            else:
-                today_jobs.append(j)  # company site — no date available, include
-        elif _RECENT_RELATIVE.search(posted):
-            today_jobs.append(j)   # Indeed / Naukri relative text → recent
-        else:
-            try:
-                if str(posted)[:10] >= today_str:
-                    today_jobs.append(j)
-            except Exception:
-                today_jobs.append(j)
-    log(f"Today's jobs only: {len(today_jobs)} (filtered out {len(us_tax_jobs) - len(today_jobs)} older jobs)")
-    us_tax_jobs = today_jobs
-
-    # AUTO SEED: first run
-    if len(seen) == 0 and len(us_tax_jobs) > 0:
-        log("First run — seeding baseline. No messages sent.")
-        for job in us_tax_jobs:
-            seen.add(job["id"])
-        save_seen(seen)
-        log(f"Baseline set: {len(seen)} jobs. Next cycle sends only NEW jobs.")
-        return
+    # No date filter — LinkedIn filters by since_seconds=86400, seen_jobs.json deduplicates
+    log(f"US Tax jobs ready to process: {len(us_tax_jobs)}")
 
     # New jobs only — sorted oldest-first so channel shows newest at top
     new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]
