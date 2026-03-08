@@ -538,9 +538,9 @@ def main():
         try:
             last_dt = datetime.fromisoformat(last_run_at)
             elapsed = int((now_utc - last_dt).total_seconds())
-            # Add 5-minute buffer so we never miss a job at the boundary
-            # Cap at 2 hours to avoid huge fetches after a long gap
-            since_seconds = min(elapsed + 300, 7200)
+            # Add 3-minute buffer so we never miss a job at the boundary
+            # Cap at 1 hour to avoid huge fetches after a long gap
+            since_seconds = min(elapsed + 180, 3600)
         except Exception:
             since_seconds = 3600
     else:
@@ -571,13 +571,20 @@ def main():
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
 
-    # Filter: today's jobs only (skip jobs posted yesterday/2 days ago)
+    # Filter: only today's jobs
+    # LinkedIn jobs with no date are dropped (prevents old posts slipping through)
+    # Company site jobs with no date are kept (no timestamp available for them)
     today_str = date.today().isoformat()
     today_jobs = []
     for j in us_tax_jobs:
         posted = j.get("posted", "")
+        source = j.get("source", "")
+        is_linkedin = source == "LinkedIn"
         if not posted:
-            today_jobs.append(j)   # company sites have no date — include
+            if is_linkedin:
+                continue   # LinkedIn job with no date — skip, could be old
+            else:
+                today_jobs.append(j)  # company site — no date available, include
         else:
             try:
                 if str(posted)[:10] >= today_str:

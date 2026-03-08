@@ -182,7 +182,7 @@ def send_daily_summary(stats):
 
     lines += [
         "",
-        "⏱ Bot checks every *10 minutes*",
+        "⏱ Bot checks every *5 minutes*",
         f"🕐 {datetime.now().strftime('%d %b %Y %H:%M IST')}",
     ]
 
@@ -197,7 +197,7 @@ def send_and_pin_welcome():
     """
     msg = (
         "👋 *Welcome to US Tax Jobs India\\!*\n\n"
-        "🎯 This channel posts *fresh US Tax job openings* every 10 minutes — "
+        "🎯 This channel posts *fresh US Tax job openings* every 5 minutes — "
         "automatically sourced from LinkedIn, Big 4 firms and top IT/BPO companies\\.\n\n"
         "💼 *Roles we cover:*\n"
         "• US Tax Preparer / Reviewer\n"
