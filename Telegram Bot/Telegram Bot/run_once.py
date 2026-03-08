@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime, date
 import config
 from scraper import fetch_all_jobs, SESSION
-from sender import send_job, send_daily_summary, send_fail_alert, send_and_pin_welcome
+from sender import send_job, send_daily_summary, send_fail_alert
 
 # ── Gemini AI setup ───────────────────────────────────────────────────
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -484,14 +484,6 @@ def main():
     # Load state and stats
     state = load_state()
     stats = load_stats()
-
-    # ── Pin welcome message once (first run only) ─────────────────────
-    if not state.get("welcome_pinned"):
-        log("Pinning welcome message for the first time...")
-        ok = send_and_pin_welcome()
-        if ok:
-            state["welcome_pinned"] = True
-            save_state(state)
 
     # Handle Telegram commands (/status, /pause, /resume, /top, /help)
     state = handle_commands(state, stats)
