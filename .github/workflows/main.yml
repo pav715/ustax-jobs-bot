@@ -1,7 +1,7 @@
 name: US Tax Jobs Bot
 
-  on:                                                                                                                                                                                                                                                                                                                            schedule:
-      - cron: "0 * * * *"    # every 1 hour                                                                                                                                                                                                                                                                                      workflow_dispatch:
+  "on":                                                                                                                                                                                                                                                                                                                          schedule:
+      - cron: "0 * * * *"                                                                                                                                                                                                                                                                                                        workflow_dispatch:
       inputs:
         seed_mode:
           description: "Seed mode - mark all current jobs as seen without sending (run ONCE to reset)"
