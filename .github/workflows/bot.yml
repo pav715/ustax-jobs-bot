@@ -1,30 +1,37 @@
 name: US Tax Jobs Bot
+
 on:
   schedule:
-    - cron: "0 * * * *"
+    - cron: "0 * * * *"    # every 1 hour
   workflow_dispatch:
     inputs:
       seed_mode:
         description: "Seed mode - mark all current jobs as seen without sending (run ONCE to reset)"
         required: false
         default: "false"
+
 concurrency:
   group: bot-run
-  cancel-in-progress: false
+  cancel-in-progress: false   # queue instead of cancel so no run is skipped
+
 jobs:
   run-bot:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install -r "Telegram Bot/requirements.txt"
+
       - name: Run bot cycle
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
@@ -33,15 +40,17 @@ jobs:
           SEED_MODE: ${{ github.event.inputs.seed_mode || 'false' }}
           PYTHONIOENCODING: utf-8
           PYTHONUTF8: "1"
-        run: python run_once.py
+        run: cd "Telegram Bot" && python run_once.py
+
       - name: Save state files back to repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git pull --rebase origin main
-          git add seen_jobs.json stats.json bot_state.json 2>/dev/null || true
+          git add "Telegram Bot/seen_jobs.json" "Telegram Bot/stats.json" "Telegram Bot/bot_state.json" 2>/dev/null || true
           git diff --staged --quiet || git commit -m "Update bot state [skip ci]"
           git push
+
       - name: Notify Telegram on failure
         if: failure()
         env:
