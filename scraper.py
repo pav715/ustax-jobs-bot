@@ -181,6 +181,8 @@ INDEED_KEYWORDS = [
 INDEED_LOCATIONS = [
     # Broad
     "India", "Remote",
+    # US Remote — fully remote jobs open to India
+    "United States", "USA",
     # South India — main focus
     "Hyderabad", "Bangalore", "Chennai", "Kochi", "Thiruvananthapuram",
     "Coimbatore", "Visakhapatnam", "Amaravati", "Puducherry",

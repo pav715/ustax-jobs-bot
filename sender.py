@@ -232,3 +232,82 @@ def send_daily_summary(stats):
 
     _post("\n".join(lines))
 
+
+def send_and_pin_welcome():
+    """
+    Send a welcome/intro message to the channel and pin it.
+    Call once — after that it stays pinned permanently.
+    Requires the bot to have 'Pin Messages' admin permission.
+    """
+    msg = (
+        "👋 *Welcome to US Tax Jobs India\\!*\n\n"
+        "🎯 This channel posts *fresh US Tax job openings* every 5 minutes — "
+        "automatically sourced from LinkedIn, Big 4 firms and top IT/BPO companies\\.\n\n"
+        "💼 *Roles we cover:*\n"
+        "• US Tax Preparer / Reviewer\n"
+        "• Tax Analyst / Compliance Analyst\n"
+        "• Tax Consultant / Associate\n"
+        "• Tax Software / QA / E\\-file roles\n"
+        "• Senior / Manager US Tax roles\n\n"
+        "📍 *Locations:* Hyderabad, Bangalore, Chennai, Remote & more\n\n"
+        "🔔 *Turn on notifications* so you never miss a job\\!\n\n"
+        "✅ Good luck with your job search\\! 🚀"
+    )
+
+    api = f"https://api.telegram.org/bot{config.BOT_TOKEN}"
+
+    # Step 1 — send the message
+    try:
+        r = requests.post(
+            f"{api}/sendMessage",
+            json={
+                "chat_id":                  config.CHAT_ID,
+                "text":                     msg,
+                "parse_mode":               "MarkdownV2",
+                "disable_web_page_preview": True,
+            },
+            timeout=15,
+        )
+        if r.status_code != 200:
+            print(f"[Pin] Failed to send welcome message: {r.text}")
+            return False
+
+        message_id = r.json()["result"]["message_id"]
+        print(f"[Pin] Welcome message sent (id={message_id})")
+
+    except Exception as e:
+        print(f"[Pin] Send error: {e}")
+        return False
+
+    # Step 2 — pin it (disable_notification=True so no alert spam)
+    try:
+        r2 = requests.post(
+            f"{api}/pinChatMessage",
+            json={
+                "chat_id":              config.CHAT_ID,
+                "message_id":          message_id,
+                "disable_notification": True,
+            },
+            timeout=15,
+        )
+        if r2.status_code == 200:
+            print(f"[Pin] Welcome message pinned successfully.")
+            return True
+        else:
+            print(f"[Pin] Pin failed: {r2.text}")
+            return False
+
+    except Exception as e:
+        print(f"[Pin] Pin error: {e}")
+        return False
+
+
+def send_fail_alert(error_msg=""):
+    """Send alert if bot encounters a critical error."""
+    msg = (
+        "❌ *US Tax Jobs Bot — Error*\n\n"
+        f"Something went wrong:\n`{_escape(str(error_msg)[:200])}`\n\n"
+        "Please check GitHub Actions logs.\n"
+        f"🕐 {datetime.now().strftime('%d %b %Y %H:%M')}"
+    )
+    _post(msg)
