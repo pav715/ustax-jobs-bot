@@ -2,7 +2,6 @@
 Single-cycle runner for GitHub Actions.
 Fetches jobs, enriches with real description, filters US Tax only,
 sends to Telegram with actual job info.
-AI-powered via Google Gemini Flash (free tier).
 """
 import json
 import os
@@ -15,26 +14,6 @@ import config
 from scraper import fetch_all_jobs, SESSION
 from sender import send_job, send_daily_summary, send_fail_alert
 
-# ── Gemini AI setup ───────────────────────────────────────────────────
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
-_gemini_model = None
-
-def _get_gemini():
-    global _gemini_model
-    if _gemini_model:
-        return _gemini_model
-    if not GEMINI_KEY:
-        print("[AI] GEMINI_API_KEY not set — AI enrichment disabled.")
-        return None
-    try:
-        import google.generativeai as genai
-        genai.configure(api_key=GEMINI_KEY)
-        _gemini_model = genai.GenerativeModel("gemini-1.5-flash")
-        print("[AI] Gemini 1.5 Flash initialized successfully.")
-        return _gemini_model
-    except Exception as e:
-        print(f"[AI] Gemini init FAILED: {e}")
-        return None
 
 SEEN_FILE      = "seen_jobs.json"
 STATS_FILE     = "stats.json"
@@ -277,78 +256,6 @@ def enrich_job(job):
     return job
 
 
-# ── AI enrichment ─────────────────────────────────────────────────────
-def ai_enrich_job(job):
-    """Gemini Flash: extract job info + match score against candidate profile."""
-    model = _get_gemini()
-    if not model:
-        return job
-
-    title = job.get("title", "")
-    desc  = job.get("description", "")
-
-    if not desc or len(desc) < 100:
-        return job
-
-    prompt = f"""You are a US Tax recruitment expert. Analyze this job posting and score it against the candidate profile.
-
-Job Title: {title}
-Job Description: {desc[:2500]}
-
-Candidate Profile:
-{config.USER_PROFILE}
-
-Return ONLY valid JSON — no markdown, no explanation:
-{{
-  "experience": "X-Y Years in specific area",
-  "qualification": "exact degree/certification from job",
-  "salary": "salary range if mentioned, else Not mentioned",
-  "match_score": 85,
-  "match_highlights": ["reason this matches candidate", "another strength"],
-  "is_us_tax_job": true
-}}
-
-Rules:
-- experience: exact years mentioned or infer from seniority
-- qualification: B.Com / CA / CPA / MBA as stated in job
-- salary: extract if mentioned (e.g. "12-18 LPA"), else "Not mentioned"
-- match_score: 0-100 based on how well candidate profile matches this job
-- match_highlights: 2-3 reasons why candidate is a good/poor fit
-- is_us_tax_job: true only if job involves US federal/state tax (IRS, 1040, 1041 etc.)"""
-
-    try:
-        response = model.generate_content(prompt)
-        text = response.text.strip()
-
-        if "```" in text:
-            text = text.split("```")[1]
-            if text.startswith("json"):
-                text = text[4:]
-            text = text.strip()
-
-        data = json.loads(text)
-
-        if data.get("experience"):
-            job["_experience"] = data["experience"]
-        if data.get("qualification"):
-            job["_qualification"] = data["qualification"]
-        if data.get("salary"):
-            job["_salary"] = data["salary"]
-        if data.get("match_score") is not None:
-            job["_match_score"] = int(data["match_score"])
-        if data.get("match_highlights"):
-            job["_match_highlights"] = data["match_highlights"]
-        if data.get("is_us_tax_job") is False:
-            job["_ai_rejected"] = True
-
-        log(f"  [AI] {title[:45]} | Match: {job.get('_match_score', '?')}% | Salary: {job.get('_salary', '?')}")
-
-    except Exception as e:
-        log(f"  [AI] Skipped '{title[:40]}': {e}")
-
-    time.sleep(1)
-    return job
-
 
 def extract_experience(desc, title):
     patterns = [
@@ -527,9 +434,6 @@ def main():
         log(f"Capping to {config.MAX_JOBS_PER_CYCLE} jobs this cycle.")
         new_jobs = new_jobs[:config.MAX_JOBS_PER_CYCLE]
 
-    use_ai = _get_gemini() is not None
-    log(f"AI: {'ON (Gemini 1.5 Flash)' if use_ai else 'OFF — check GEMINI_API_KEY secret'}")
-
     enriched = []
     for job in new_jobs:
         # Step 1: fetch real description
@@ -537,33 +441,13 @@ def main():
         desc  = job.get("description", "")
         title = job.get("title", "")
 
-        # Step 2: AI extraction + match score
-        if use_ai:
-            job = ai_enrich_job(job)
-
-        # Step 3: regex fallback for fields still shown in message
+        # Step 2: regex-based field extraction
         if not job.get("_experience"):
             job["_experience"]    = extract_experience(desc, title)
         if not job.get("_qualification"):
             job["_qualification"] = extract_qualification(desc, title)
 
-        # Step 4: drop AI-rejected jobs
-        if job.get("_ai_rejected"):
-            log(f"  [AI] Rejected (not US Tax): {title}")
-            seen.add(job["id"])
-            continue
-
-        # Step 5: drop low match score jobs
-        score = job.get("_match_score", 100)
-        if use_ai and score < config.MIN_MATCH_SCORE:
-            log(f"  [AI] Low match ({score}%): {title}")
-            seen.add(job["id"])
-            continue
-
         enriched.append(job)
-
-    # Sort by match score (highest first)
-    enriched.sort(key=lambda j: j.get("_match_score", 0), reverse=True)
 
     sent = 0
     for job in enriched:
@@ -573,7 +457,7 @@ def main():
                 seen.add(job["id"])
                 sent += 1
                 update_stats(stats, job)
-                log(f"  Sent [{job.get('_match_score', '?')}%]: {job['title']} @ {job['company']}")
+                log(f"  Sent: {job['title']} @ {job['company']}")
             else:
                 log(f"  Failed: {job['title']}")
         except Exception as e:

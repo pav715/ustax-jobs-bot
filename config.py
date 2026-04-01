@@ -129,18 +129,6 @@ LOCATIONS = [
 # ── Timing ────────────────────────────────────────────────────────────
 CHECK_INTERVAL_MINUTES = 5   # GitHub Actions cron: every 5 minutes
 
-# ── Your Profile (used by AI for match scoring) ───────────────────────
-USER_PROFILE = (
-    "6 years US Tax experience: Tax Preparer → H&R Block → Thomson Reuters → "
-    "Intuit (current: Filing Product Programmer 2). "
-    "Skills: 1040, 1041, 1120, 1065, 990, 5500, IRS, XML/XSD schemas, "
-    "ATS acceptance testing, E-file approvals, Tax software development, Python. "
-    "Location: Hyderabad, India. Education: B.Com Computer 2019."
-)
-
-# Only send jobs where AI match score >= this value (0 = send all)
-MIN_MATCH_SCORE = 50
-
 # Max jobs to send per cycle (prevents spam on first big batch)
 MAX_JOBS_PER_CYCLE = 15
 
