@@ -1,8 +1,4 @@
-"""
-Single-cycle runner for GitHub Actions.
-Fetches jobs, enriches with real description, filters US Tax only,
-sends to Telegram with actual job info.
-"""
+"""Single-cycle runner for GitHub Actions — LinkedIn only."""
 import json
 import os
 import re
@@ -14,12 +10,10 @@ import config
 from scraper import fetch_all_jobs, SESSION
 from sender import send_job, send_daily_summary, send_fail_alert
 
+SEEN_FILE  = "seen_jobs.json"
+STATS_FILE = "stats.json"
+STATE_FILE = "bot_state.json"
 
-SEEN_FILE      = "seen_jobs.json"
-STATS_FILE     = "stats.json"
-STATE_FILE     = "bot_state.json"
-
-# ── US Tax relevance filter ───────────────────────────────────────────
 US_TAX_TERMS = re.compile(
     r"\b("
     r"us\s*tax(ation)?|u\.s\.?\s*tax|united\s*states\s*tax|"
@@ -32,9 +26,8 @@ US_TAX_TERMS = re.compile(
     r"tax\s*prep(arer|aration)|tax\s*e.?fil|"
     r"tax\s*compliance|tax\s*analyst|tax\s*consultant|"
     r"tax\s*reviewer|tax\s*associate|tax\s*advisor|"
-    r"tax\s*software|tax\s*schema|tax\s*business\s*rules|"
-    r"tax\s*sme|tax\s*subject\s*matter|"
-    r"direct\s*tax|tax\s*returns?"
+    r"tax\s*software|tax\s*sme|tax\s*subject\s*matter|"
+    r"tax\s*returns?"
     r")\b",
     re.IGNORECASE,
 )
@@ -52,35 +45,6 @@ BLOCKLIST = re.compile(
     re.IGNORECASE,
 )
 
-# ── Location filter — India / Remote only ────────────────────────────
-USA_LOCATION = re.compile(
-    r"\b(usa|united\s*states?|u\.s\.a?\.?|"
-    r"new\s*york|california|texas|florida|illinois|washington\s*dc|"
-    r"massachusetts|new\s*jersey|georgia|ohio|virginia|pennsylvania|"
-    r"north\s*carolina|michigan|arizona|colorado|"
-    r"\bNY\b|\bCA\b|\bTX\b|\bFL\b|\bIL\b|\bNJ\b|\bGA\b|\bMA\b|"
-    r"\bOH\b|\bVA\b|\bPA\b|\bNC\b|\bMI\b|\bAZ\b|\bCO\b|\bDC\b)\b",
-    re.IGNORECASE,
-)
-
-INDIA_LOCATION_FILTER = re.compile(
-    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|"
-    r"delhi|gurugram|gurgaon|noida|kerala|tamil|remote|work\s*from\s*home",
-    re.IGNORECASE,
-)
-
-
-def is_india_job(job):
-    """Return True only if job is in India or Remote — never USA."""
-    loc = job.get("location", "")
-    if USA_LOCATION.search(loc):
-        return False
-    if INDIA_LOCATION_FILTER.search(loc):
-        return True
-    if not loc or loc.strip() in ("", "India / Remote", "India"):
-        return True
-    return True
-
 
 def is_us_tax_job(job):
     title = job.get("title", "")
@@ -93,7 +57,6 @@ def is_us_tax_job(job):
     return True
 
 
-# ── Bot state (pause/resume) ──────────────────────────────────────────
 def load_state():
     if os.path.exists(STATE_FILE):
         try:
@@ -101,7 +64,7 @@ def load_state():
                 return json.load(f)
         except Exception:
             pass
-    return {"paused": False, "last_update_id": 0, "last_run_at": "", "welcome_pinned": False}
+    return {"paused": False, "last_update_id": 0, "last_run_at": ""}
 
 
 def save_state(state):
@@ -109,7 +72,6 @@ def save_state(state):
         json.dump(state, f)
 
 
-# ── Daily stats ───────────────────────────────────────────────────────
 def load_stats():
     today = date.today().isoformat()
     if os.path.exists(STATS_FILE):
@@ -128,18 +90,35 @@ def save_stats(stats):
         json.dump(stats, f)
 
 
-def update_stats(stats, job):
-    stats["sent"] += 1
-    company = job.get("company", "Other")
-    stats["companies"][company] = stats["companies"].get(company, 0) + 1
+def load_seen():
+    """Load seen job IDs. Handles [], {}, and corrupt files gracefully."""
+    if os.path.exists(SEEN_FILE):
+        try:
+            with open(SEEN_FILE, "r") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return set(data)
+            if isinstance(data, dict):
+                return set(data.keys()) if data else set()
+        except Exception:
+            pass
+    return set()
 
 
-# ── Telegram command handler ──────────────────────────────────────────
+def save_seen(seen_set):
+    data = list(seen_set)[-5000:]
+    with open(SEEN_FILE, "w") as f:
+        json.dump(data, f)
+
+
+def log(msg):
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{ts}] {msg}")
+
+
 def handle_commands(state, stats):
-    """Check for Telegram commands and respond."""
     if not config.BOT_TOKEN:
         return state
-
     try:
         offset = state.get("last_update_id", 0) + 1
         r = requests.get(
@@ -156,81 +135,46 @@ def handle_commands(state, stats):
             msg = (update.get("message") or update.get("channel_post") or {})
             text = msg.get("text", "").strip().lower()
             chat_id = str(msg.get("chat", {}).get("id", ""))
-
             if not chat_id:
                 continue
 
             api = f"https://api.telegram.org/bot{config.BOT_TOKEN}/sendMessage"
 
-            if text == "/status" or text.startswith("/status"):
+            if text.startswith("/status"):
                 reply = (
                     f"🤖 *US Tax Jobs Bot — Status*\n\n"
                     f"{'⏸ PAUSED' if state.get('paused') else '✅ RUNNING'}\n\n"
                     f"📊 *Today ({stats['date']}):*\n"
                     f"• Jobs sent: *{stats['sent']}*\n"
                     f"• Companies: *{len(stats['companies'])}*\n"
-                    f"⏱ Checks every *5 minutes*\n"
+                    f"⏱ Checks every *1 hour*\n"
                     f"🕐 {datetime.now().strftime('%d %b %Y %H:%M IST')}"
                 )
                 requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
-
             elif text == "/pause":
                 state["paused"] = True
-                requests.post(api, json={
-                    "chat_id": chat_id,
-                    "text": "⏸ *Bot paused.* Send /resume to restart notifications.",
-                    "parse_mode": "Markdown"
-                }, timeout=10)
-
+                requests.post(api, json={"chat_id": chat_id, "text": "⏸ *Bot paused.* Send /resume to restart.", "parse_mode": "Markdown"}, timeout=10)
             elif text == "/resume":
                 state["paused"] = False
-                requests.post(api, json={
-                    "chat_id": chat_id,
-                    "text": "▶️ *Bot resumed.* Notifications are back on.",
-                    "parse_mode": "Markdown"
-                }, timeout=10)
-
-            elif text == "/top":
-                if stats["companies"]:
-                    top = sorted(stats["companies"].items(), key=lambda x: x[1], reverse=True)[:5]
-                    lines = ["🏆 *Top Hiring Companies Today:*\n"]
-                    for i, (co, cnt) in enumerate(top, 1):
-                        lines.append(f"{i}. {co} — {cnt} job{'s' if cnt > 1 else ''}")
-                    reply = "\n".join(lines)
-                else:
-                    reply = "📭 No jobs sent yet today."
-                requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
-
+                requests.post(api, json={"chat_id": chat_id, "text": "▶️ *Bot resumed.* Notifications are back on.", "parse_mode": "Markdown"}, timeout=10)
             elif text == "/help":
-                reply = (
-                    "🤖 *US Tax Jobs Bot — Commands*\n\n"
-                    "/status — Bot status & today's count\n"
-                    "/pause — Pause job notifications\n"
-                    "/resume — Resume notifications\n"
-                    "/top — Top hiring companies today\n"
-                    "/help — Show this help"
-                )
+                reply = "🤖 *Commands:*\n/status — Bot status\n/pause — Pause\n/resume — Resume\n/help — Help"
                 requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
-
     except Exception as e:
         log(f"[Commands] Error: {e}")
-
     return state
 
 
-# ── Fetch real job description ────────────────────────────────────────
 def enrich_job(job):
+    """Fetch full job description from LinkedIn detail page."""
     if job.get("description") and len(job["description"]) > 300:
         return job
-
-    url    = job.get("url", "")
-    source = job.get("source", "")
-
+    url = job.get("url", "")
     try:
         if "linkedin.com" in url:
             match = re.search(r'/(\d{8,})', url)
             if match:
-                jid        = match.group(1)
+                jid = match.group(1)
                 detail_url = f"https://www.linkedin.com/jobs-guest/jobs/api/jobPosting/{jid}"
                 r = SESSION.get(detail_url, timeout=12)
                 if r.status_code == 200:
@@ -241,20 +185,16 @@ def enrich_job(job):
                     )
                     if desc_div:
                         job["description"] = desc_div.get_text(" ", strip=True)[:2000]
-
                     criteria = soup.find_all("span", class_=re.compile(r"description__job-criteria-text"))
                     for c in criteria:
                         text = c.get_text(strip=True)
                         if re.search(r"year|experience|mid|senior|entry", text, re.IGNORECASE):
                             if not job.get("experience") or len(job["experience"]) < 3:
                                 job["experience"] = text
-
     except Exception as e:
-        log(f"  [Enrich] {source} error: {e}")
-
+        log(f"  [Enrich] error: {e}")
     time.sleep(1.5)
     return job
-
 
 
 def extract_experience(desc, title):
@@ -277,46 +217,17 @@ def extract_experience(desc, title):
 
 def extract_qualification(desc, title):
     qual_match = re.search(
-        r"(B\.?Com|B\.?Tech|MBA|CA|CPA|EA|Bachelor|Master|Graduate|Post.?Graduate)"
-        r"[^\n.]{0,80}",
-        desc, re.IGNORECASE
+        r"(B\.?Com|B\.?Tech|MBA|CA|CPA|EA|Bachelor|Master|Graduate|Post.?Graduate)[^\n.]{0,80}",
+        desc, re.IGNORECASE,
     )
     if qual_match:
         return qual_match.group(0).strip()[:120]
-    t = title.lower()
-    if any(x in t for x in ["senior", "manager", "lead"]):
-        return "Graduate / Post-Graduate (Accounting / Finance / Commerce)"
-    elif any(x in t for x in ["software", "developer"]):
-        return "B.Com / B.Tech / BCA (Computer / Accounting preferred)"
     return "Graduate / Post-Graduate (Accounting / Finance preferred)"
 
 
-# ── Seen jobs ─────────────────────────────────────────────────────────
-def load_seen():
-    if os.path.exists(SEEN_FILE):
-        try:
-            with open(SEEN_FILE, "r") as f:
-                return set(json.load(f))
-        except Exception:
-            pass
-    return set()
-
-
-def save_seen(seen_set):
-    data = list(seen_set)[-5000:]
-    with open(SEEN_FILE, "w") as f:
-        json.dump(data, f)
-
-
-def log(msg):
-    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{ts}] {msg}")
-
-
-# ── Main ──────────────────────────────────────────────────────────────
 def main():
     log("=" * 50)
-    log("US Tax Jobs Bot — Single Cycle")
+    log("US Tax Jobs Bot — LinkedIn Only")
     log("=" * 50)
 
     if not config.BOT_TOKEN:
@@ -326,99 +237,32 @@ def main():
         log("ERROR: CHAT_ID not set.")
         return
 
-    # Load state and stats
     state = load_state()
     stats = load_stats()
 
-    # Handle Telegram commands (/status, /pause, /resume, /top, /help)
     state = handle_commands(state, stats)
     save_state(state)
 
-    # Check if bot is paused
     if state.get("paused"):
-        log("Bot is PAUSED. Send /resume to Telegram bot to restart.")
+        log("Bot is PAUSED. Send /resume to restart.")
         return
 
-    # Always fetch last 24 hours — seen_jobs.json handles deduplication
-    # Previous approach (dynamic 5-min window) caused jobs to be missed all day
-    now_utc = datetime.utcnow()
-    since_seconds = 86400
-    log(f"Fetch window: 24 hours (last run: {state.get('last_run_at') or 'never'})")
-
-    # Record this run time for stats/logging
-    state["last_run_at"] = now_utc.isoformat()
+    state["last_run_at"] = datetime.utcnow().isoformat()
     save_state(state)
-
-    # Daily summary at 9 AM IST (3:30 AM UTC)
-    if now_utc.hour == 3 and 30 <= now_utc.minute < 40 and not stats.get("summary_sent"):
-        send_daily_summary(stats)
-        stats["summary_sent"] = True
-        save_stats(stats)
 
     seen = load_seen()
     log(f"Loaded {len(seen)} previously seen jobs.")
 
     try:
-        jobs = fetch_all_jobs(since_seconds=since_seconds)
+        jobs = fetch_all_jobs(since_seconds=86400)
     except Exception as e:
         log(f"Scrape error: {e}")
         send_fail_alert(f"Scrape error: {e}")
         return
 
-    # Filter: US Tax relevant only
     us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
 
-    # Filter: only today / recent jobs
-    # - LinkedIn ISO date  → compare to today's date string
-    # - Indeed/Naukri      → relative strings like "1 day ago", "Today", "Just posted" → always keep
-    # - No date on LinkedIn → drop (could be old)
-    # - No date on other sources → keep (no timestamp available)
-    today_str = date.today().isoformat()
-
-    # Matches relative date strings from Indeed, Naukri, Workday:
-    #   "Just posted", "Today", "Posted Today", "1 hour ago",
-    #   "Posted 0 Days Ago", "Posted 1 Days Ago"
-    _RECENT_RELATIVE = re.compile(
-        r"just\s*posted|posted\s*today|today|"
-        r"(\b[0-9]+\s*(hour|hr|minute|min|second)s?\s*(ago)?)|"
-        r"(posted\s*[01]\s*days?\s*ago)|"
-        r"(\b[01]\s*days?\s*ago)",
-        re.IGNORECASE,
-    )
-
-    today_jobs = []
-    for j in us_tax_jobs:
-        posted = str(j.get("posted", "")).strip()
-        source = j.get("source", "")
-        is_linkedin = source == "LinkedIn"
-
-        if not posted:
-            if is_linkedin:
-                continue   # LinkedIn job with no date — skip, could be old
-            else:
-                today_jobs.append(j)  # company site — no date available, include
-        elif _RECENT_RELATIVE.search(posted):
-            today_jobs.append(j)   # Indeed / Naukri relative text → recent
-        else:
-            try:
-                if str(posted)[:10] >= today_str:
-                    today_jobs.append(j)
-            except Exception:
-                today_jobs.append(j)
-    log(f"Today's jobs only: {len(today_jobs)} (filtered out {len(us_tax_jobs) - len(today_jobs)} older jobs)")
-    us_tax_jobs = today_jobs
-
-    # AUTO SEED: first run
-    if len(seen) == 0 and len(us_tax_jobs) > 0:
-        log("First run — seeding baseline. No messages sent.")
-        for job in us_tax_jobs:
-            seen.add(job["id"])
-        save_seen(seen)
-        log(f"Baseline set: {len(seen)} jobs. Next cycle sends only NEW jobs.")
-        return
-
-    # New jobs only — sorted oldest-first so channel shows newest at top
     new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]
     new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
     log(f"New jobs to send: {len(new_jobs)}")
@@ -429,34 +273,28 @@ def main():
         save_stats(stats)
         return
 
-    # Cap to prevent spam
     if len(new_jobs) > config.MAX_JOBS_PER_CYCLE:
         log(f"Capping to {config.MAX_JOBS_PER_CYCLE} jobs this cycle.")
         new_jobs = new_jobs[:config.MAX_JOBS_PER_CYCLE]
 
-    enriched = []
+    sent = 0
     for job in new_jobs:
-        # Step 1: fetch real description
         job = enrich_job(job)
         desc  = job.get("description", "")
         title = job.get("title", "")
-
-        # Step 2: regex-based field extraction
         if not job.get("_experience"):
-            job["_experience"]    = extract_experience(desc, title)
+            job["_experience"] = extract_experience(desc, title)
         if not job.get("_qualification"):
             job["_qualification"] = extract_qualification(desc, title)
 
-        enriched.append(job)
-
-    sent = 0
-    for job in enriched:
         try:
             ok = send_job(job)
             if ok:
                 seen.add(job["id"])
                 sent += 1
-                update_stats(stats, job)
+                stats["sent"] += 1
+                company = job.get("company", "Other")
+                stats["companies"][company] = stats["companies"].get(company, 0) + 1
                 log(f"  Sent: {job['title']} @ {job['company']}")
             else:
                 log(f"  Failed: {job['title']}")
