@@ -46,6 +46,38 @@ BLOCKLIST = re.compile(
 )
 
 
+USA_LOCATION = re.compile(
+    r"\b(usa|united\s*states?|u\.s\.a?\.?|"
+    r"new\s*york|california|texas|florida|illinois|washington\s*dc|"
+    r"massachusetts|new\s*jersey|georgia|ohio|virginia|pennsylvania|"
+    r"north\s*carolina|michigan|arizona|colorado|"
+    r"\bNY\b|\bCA\b|\bTX\b|\bFL\b|\bIL\b|\bNJ\b|\bGA\b|\bMA\b|"
+    r"\bOH\b|\bVA\b|\bPA\b|\bNC\b|\bMI\b|\bAZ\b|\bCO\b|\bDC\b)\b",
+    re.IGNORECASE,
+)
+
+INDIA_LOCATION = re.compile(
+    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|"
+    r"delhi|gurugram|gurgaon|noida|kerala|tamil|kolkata|"
+    r"ahmedabad|nagpur|indore|jaipur|bhopal|lucknow|chandigarh|"
+    r"bhubaneswar|kochi|coimbatore|visakhapatnam|thiruvananthapuram|"
+    r"remote|work\s*from\s*home",
+    re.IGNORECASE,
+)
+
+
+def is_india_job(job):
+    """Return True only if job is in India — reject USA locations."""
+    loc = job.get("location", "")
+    if USA_LOCATION.search(loc):
+        return False
+    if INDIA_LOCATION.search(loc):
+        return True
+    if not loc or loc.strip() == "":
+        return True
+    return False
+
+
 def is_us_tax_job(job):
     title = job.get("title", "")
     desc  = job.get("description", "")
@@ -260,8 +292,11 @@ def main():
         send_fail_alert(f"Scrape error: {e}")
         return
 
-    us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
-    log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total.")
+    india_jobs = [j for j in jobs if is_india_job(j)]
+    log(f"India location: {len(india_jobs)} out of {len(jobs)} total.")
+
+    us_tax_jobs = [j for j in india_jobs if is_us_tax_job(j)]
+    log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(india_jobs)} India jobs.")
 
     new_jobs = [j for j in us_tax_jobs if j["id"] not in seen]
     new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
