@@ -279,14 +279,31 @@ def main():
         log("Bot is PAUSED. Send /resume to restart.")
         return
 
+    # Calculate time window: only fetch jobs since last run (+ 5 min buffer)
+    last_run = state.get("last_run_at", "")
+    if last_run:
+        try:
+            last_dt = datetime.fromisoformat(last_run)
+            elapsed = (datetime.utcnow() - last_dt).total_seconds()
+            since_seconds = int(elapsed) + 300  # add 5 min buffer
+        except Exception:
+            since_seconds = 2400  # fallback: 40 minutes
+    else:
+        since_seconds = 2400  # first run: 40 minutes
+
+    # Cap: minimum 30 min, maximum 2 hours
+    since_seconds = max(1800, min(since_seconds, 7200))
+
     state["last_run_at"] = datetime.utcnow().isoformat()
     save_state(state)
+
+    log(f"Fetch window: {since_seconds // 60} minutes")
 
     seen = load_seen()
     log(f"Loaded {len(seen)} previously seen jobs.")
 
     try:
-        jobs = fetch_all_jobs(since_seconds=86400)
+        jobs = fetch_all_jobs(since_seconds=since_seconds)
     except Exception as e:
         log(f"Scrape error: {e}")
         send_fail_alert(f"Scrape error: {e}")
