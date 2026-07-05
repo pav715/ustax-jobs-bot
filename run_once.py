@@ -64,11 +64,6 @@ def is_valid_us_tax_job(job):
 
 def is_us_tax_job(job):
     title = job.get("title", "")
-    company = job.get("company", "")
-    desc  = job.get("description", "")
-    full  = f"{title} {company} {desc}"
-    if not US_TAX_TERMS.search(full):
-        return False
     if BLOCKLIST.search(title):
         return False
     return True
