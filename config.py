@@ -7,24 +7,15 @@ CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")  # Already correct
 # Near-duplicates merged: "Tax Analyst" covers "US Tax Analyst"; "Tax Associate"
 # covers "US Tax Associate" / "Senior Tax Associate"; "1040 Tax" etc. anchor forms.
 KEYWORDS = [
-    "US Tax",
-    "US Taxation",
-    "Tax Analyst",
-    "Tax Associate",
-    "Tax Preparer",
-    "US Tax Reviewer",
-    "Tax Consultant",
-    "Tax Compliance",
-    "Federal Tax",
-    "Tax Senior",
+    "1040",
+    "1041",
+    "1065",
+    "1120",
+    "US Tax Preparer",
+    "US Tax Analyst",
     "Enrolled Agent",
-    "International Tax",
-    "Expat Tax",
-    "Partnership Tax",
-    "Corporate Tax US",
-    "1040 Tax",
-    "1065 Tax",
-    "1120 Tax",
+    "CPA Tax",
+    "IRS",
 ]
 
 # India US-Tax delivery hubs + remote. "India" already covers smaller hubs
