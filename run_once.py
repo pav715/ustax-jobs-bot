@@ -1,4 +1,4 @@
-"""Single-cycle runner for GitHub Actions — LinkedIn only. Updated: 2026-07-04"""
+"""Single-cycle runner for GitHub Actions â€” LinkedIn only. Updated: 2026-07-04"""
 import json
 import os
 import re
@@ -78,7 +78,7 @@ INDIA_LOCATION = re.compile(
 
 
 def is_india_job(job):
-    """Return True only if job is in India — reject USA locations."""
+    """Return True only if job is in India â€” reject USA locations."""
     loc = job.get("location", "")
     if USA_LOCATION.search(loc):
         return False
@@ -160,7 +160,7 @@ def log(msg):
 
 
 def _dedup_key(job):
-    """Title+company fingerprint — blocks the same job even if LinkedIn
+    """Title+company fingerprint â€” blocks the same job even if LinkedIn
     gives it a new URL each scrape (prevents channel spam)."""
     title   = (job.get("title") or "").lower().strip()
     company = (job.get("company") or "").lower().strip()
@@ -193,23 +193,23 @@ def handle_commands(state, stats):
 
             if text.startswith("/status"):
                 reply = (
-                    f"🤖 *US Tax Jobs Bot — Status*\n\n"
-                    f"{'⏸ PAUSED' if state.get('paused') else '✅ RUNNING'}\n\n"
-                    f"📊 *Today ({stats['date']}):*\n"
-                    f"• Jobs sent: *{stats['sent']}*\n"
-                    f"• Companies: *{len(stats['companies'])}*\n"
-                    f"⏱ Checks every *1 hour*\n"
-                    f"🕐 {datetime.now().strftime('%d %b %Y %H:%M IST')}"
+                    f"ðŸ¤– *US Tax Jobs Bot â€” Status*\n\n"
+                    f"{'â¸ PAUSED' if state.get('paused') else 'âœ… RUNNING'}\n\n"
+                    f"ðŸ“Š *Today ({stats['date']}):*\n"
+                    f"â€¢ Jobs sent: *{stats['sent']}*\n"
+                    f"â€¢ Companies: *{len(stats['companies'])}*\n"
+                    f"â± Checks every *1 hour*\n"
+                    f"ðŸ• {datetime.now().strftime('%d %b %Y %H:%M IST')}"
                 )
                 requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
             elif text == "/pause":
                 state["paused"] = True
-                requests.post(api, json={"chat_id": chat_id, "text": "⏸ *Bot paused.* Send /resume to restart.", "parse_mode": "Markdown"}, timeout=10)
+                requests.post(api, json={"chat_id": chat_id, "text": "â¸ *Bot paused.* Send /resume to restart.", "parse_mode": "Markdown"}, timeout=10)
             elif text == "/resume":
                 state["paused"] = False
-                requests.post(api, json={"chat_id": chat_id, "text": "▶️ *Bot resumed.* Notifications are back on.", "parse_mode": "Markdown"}, timeout=10)
+                requests.post(api, json={"chat_id": chat_id, "text": "â–¶ï¸ *Bot resumed.* Notifications are back on.", "parse_mode": "Markdown"}, timeout=10)
             elif text == "/help":
-                reply = "🤖 *Commands:*\n/status — Bot status\n/pause — Pause\n/resume — Resume\n/help — Help"
+                reply = "ðŸ¤– *Commands:*\n/status â€” Bot status\n/pause â€” Pause\n/resume â€” Resume\n/help â€” Help"
                 requests.post(api, json={"chat_id": chat_id, "text": reply, "parse_mode": "Markdown"}, timeout=10)
     except Exception as e:
         log(f"[Commands] Error: {e}")
@@ -278,7 +278,7 @@ def extract_qualification(desc, title):
 
 def main():
     log("=" * 50)
-    log("US Tax Jobs Bot — LinkedIn Only")
+    log("US Tax Jobs Bot â€” LinkedIn Only")
     log("=" * 50)
 
     if not config.BOT_TOKEN:
@@ -340,6 +340,20 @@ def main():
     print(f"DEBUG: India jobs: {len(india_jobs)}")
 
     us_tax_jobs = [j for j in india_jobs if is_us_tax_job(j)]
+
+    # TEST: Add fake job for testing
+    fake_job = {
+        "title": "ðŸ§ª TEST: US Tax Analyst",
+        "company": "Test Company",
+        "location": "Hyderabad, India",
+        "url": "https://test.com/test-job",
+        "source": "TEST",
+        "posted": datetime.utcnow().isoformat(),
+        "fetched_at": datetime.utcnow().isoformat(),
+        "description": "This is a test job to verify bot is working correctly!"
+    }
+    us_tax_jobs.append(fake_job)
+
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(india_jobs)} India jobs.")
     print(f"DEBUG: US Tax jobs: {len(us_tax_jobs)}")
 
