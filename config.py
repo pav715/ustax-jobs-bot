@@ -3,11 +3,9 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8714105853:AAEBU3JWHAV8mk17MjSLTYh8W2QO2I-1cts")
 CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")  # Already correct
 
-# Broad search terms - filter by description keywords (3+ matches required)
-# These are just to get initial results - ACTUAL filtering happens by description
+# Search keyword - actual filtering happens by description (3+ matches required)
 KEYWORDS = [
     "tax",
-    "job",
 ]
     "Tax Digital Consultant",
 
