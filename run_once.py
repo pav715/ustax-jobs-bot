@@ -371,13 +371,20 @@ def main():
     print(f"DEBUG: US Tax jobs: {len(us_tax_jobs)}")
 
     if len(india_jobs) > 0 and len(us_tax_jobs) == 0:
-        log(f"DEBUG: Checking first India job for filter match:")
+        log("DEBUG: Checking first India job for filter match:")
         first_job = india_jobs[0]
-        log(f"  Title: {first_job.get('title', '')}")
-        log(f"  Company: {first_job.get('company', '')}")
-        log(f"  Location: {first_job.get('location', '')}")
-        log(f"  Matches US_TAX_TERMS: {bool(US_TAX_TERMS.search(f\"{first_job.get('title', '')} {first_job.get('company', '')} {first_job.get('description', '')}\"))}")
-        log(f"  Matches BLOCKLIST: {bool(BLOCKLIST.search(first_job.get('title', '')))}")
+        title = first_job.get('title', '')
+        company = first_job.get('company', '')
+        desc = first_job.get('description', '')
+        location = first_job.get('location', '')
+        full_text = f"{title} {company} {desc}"
+        tax_match = bool(US_TAX_TERMS.search(full_text))
+        block_match = bool(BLOCKLIST.search(title))
+        log(f"  Title: {title}")
+        log(f"  Company: {company}")
+        log(f"  Location: {location}")
+        log(f"  Matches US_TAX_TERMS: {tax_match}")
+        log(f"  Matches BLOCKLIST: {block_match}")
 
     new_jobs = [j for j in us_tax_jobs if _dedup_key(j) not in seen]
     new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
