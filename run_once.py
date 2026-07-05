@@ -108,8 +108,21 @@ def is_us_tax_job(job):
     ]
 
     indian_tax_keywords = [
-        "gst", "goods and services tax", "income tax", "it return",
-        "indian tax", "india tax", "ato", "inr", "rupee"
+        # Indian tax forms
+        "itr", "itr-1", "itr-2", "itr-3", "itr-4", "itr-5", "itr-6", "itr-7",
+        "gst", "goods and services tax", "gstn",
+        "vat", "value added tax",
+        "income tax", "it return", "it analyst",
+        # Indian taxation terms
+        "indian tax", "india tax", "indian taxation",
+        "ato", "inr", "rupee",
+        "section 80", "fy2024", "ay2024",
+        "tds", "tcs", "advance tax",
+        "form 16", "form 16a", "form 24q",
+        "challan", "e-filing", "saral",
+        "aadhar", "pan", "cin",
+        "goods and services", "indirect tax",
+        "customs duty", "excise"
     ]
 
     has_form_number = any(fn in full for fn in form_numbers)
@@ -118,6 +131,7 @@ def is_us_tax_job(job):
     has_common_role = any(role in title for role in common_tax_roles)
     has_indian_tax = any(kw in full for kw in indian_tax_keywords)
 
+    # REJECT if has ANY Indian tax keyword — strict filter
     if has_indian_tax:
         return False
 
