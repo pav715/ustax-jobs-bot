@@ -133,13 +133,13 @@ def is_india_location(job):
 
 
 def is_us_tax_job(job):
-    """HYBRID: Accept if title matches 100 roles OR description has US Tax keywords/forms."""
+    """DESCRIPTION-ONLY: Accept only if description has core tax identifiers + keywords."""
     title = job.get("title", "").lower()
     company = job.get("company", "").lower()
     desc = job.get("description", "").lower()
     full = f"{title} {company} {desc}"
 
-    # Reject if blocklist matches
+    # Reject if blocklist matches (still check title for obvious non-tax jobs)
     if BLOCKLIST.search(title):
         return False
 
@@ -153,78 +153,27 @@ def is_us_tax_job(job):
     if has_indian_tax:
         return False
 
-    # OPTION 1: Title matches one of 100 keywords
-    target_keywords = [
-        "us tax preparer", "tax preparer", "senior tax preparer",
-        "individual tax preparer", "tax return preparer",
-        "tax preparation specialist", "tax filing specialist",
-        "tax preparation analyst", "tax return specialist",
-        "federal tax preparer", "state tax preparer",
-        "tax preparer associate", "tax preparer consultant",
-        "tax filer", "tax filing analyst",
-        "tax analyst", "us tax analyst", "senior tax analyst",
-        "tax compliance analyst", "us tax compliance analyst",
-        "federal tax analyst", "state tax analyst",
-        "tax research analyst", "tax technical analyst",
-        "tax data analyst", "tax operations analyst",
-        "tax process analyst", "tax reporting analyst",
-        "tax planning analyst", "tax advisory analyst",
-        "tax reviewer", "senior tax reviewer", "tax review analyst",
-        "tax quality reviewer", "tax review specialist",
-        "tax return reviewer", "tax compliance reviewer",
-        "tax audit reviewer", "tax technical reviewer",
-        "tax senior reviewer",
-        "tax associate", "senior tax associate", "tax associate analyst",
-        "us tax associate", "tax staff associate",
-        "tax associate consultant", "tax associate specialist",
-        "junior tax associate", "tax process associate",
-        "tax compliance associate",
-        "tax consultant", "us tax consultant", "senior tax consultant",
-        "tax advisory consultant", "tax compliance consultant",
-        "tax technology consultant", "tax process consultant",
-        "tax planning consultant", "tax transformation consultant",
-        "tax digital consultant",
-        "tax senior", "us tax senior", "senior tax specialist",
-        "tax manager", "us tax manager", "senior tax manager",
-        "tax compliance manager", "tax operations manager",
-        "tax planning manager", "tax reporting manager",
-        "tax supervisor", "tax team lead",
-        "tax practice manager", "tax engagement manager",
-        "tax process manager",
-        "tax specialist", "us tax specialist", "senior tax specialist",
-        "tax compliance specialist", "tax filing specialist",
-        "tax regulatory specialist", "tax operations specialist",
-        "tax technology specialist", "tax research specialist",
-        "tax advisory specialist",
-        "us taxation analyst", "us taxation associate",
-        "us taxation consultant", "us taxation specialist",
-        "us taxation manager", "us taxation senior",
-        "us individual tax analyst", "us corporate tax analyst",
-        "us partnership tax analyst", "us international tax analyst",
-        "us indirect tax analyst", "us direct tax analyst",
-        "us tax compliance specialist", "us tax filing analyst",
-        "us tax operations analyst"
-    ]
+    # CORE IDENTIFIERS - Description MUST have one of these
+    core_identifiers = ["us tax", "us taxation", "irs", "form 1040", "dor", "department of revenue", "tax return", "federal tax"]
+    has_core_identifier = any(identifier in desc for identifier in core_identifiers)
 
-    has_matching_title = any(kw in title for kw in target_keywords)
-    has_catchall_title = "us tax" in title or "us taxation" in title
+    if not has_core_identifier:
+        return False
 
-    # OPTION 2: Description has SPECIFIC tax forms or tax-specific keywords (not generic)
+    # 50 US Tax Preparation Keywords in description
     form_numbers = ["1040", "1041", "1120", "1120s", "1065", "w-2", "1099", "schedule c", "schedule e", "schedule k-1", "1040nr"]
 
-    # 50 US Tax Preparation Keywords
     us_tax_desc_keywords = [
-        # Core Tax Keywords (1-15)
+        # Core Tax Keywords
         "form 1040", "form 1041", "form 1120", "form 1120s", "form 1065",
-        "w-2", "1099", "schedule c", "schedule e", "schedule k-1",
-        "federal tax return", "state tax return", "irs", "department of revenue", "tax withholding",
-        # Software Keywords (16-25)
+        "federal tax return", "state tax return", "tax withholding",
+        # Software Keywords
         "lacerte", "proseries", "gosystem", "onesource", "ultratax",
         "cch axcess", "prosystem fx", "drake", "atx", "taxwise",
-        # Process Keywords (26-35)
+        # Process Keywords
         "tax preparation", "tax filing", "tax compliance", "tax returns", "tax review",
         "tax advisory", "client tax returns", "electronic filing", "paper filing", "tax deductions",
-        # Domain Keywords (36-50)
+        # Domain Keywords
         "individual tax", "corporate tax", "partnership tax", "s-corporation tax", "fiduciary tax",
         "non-resident tax", "standard deduction", "itemized deduction", "tax credits", "amt",
         "fica", "fbar", "fatca", "tax liability", "tax preparer"
@@ -233,21 +182,8 @@ def is_us_tax_job(job):
     has_form_in_desc = any(fn in desc for fn in form_numbers)
     has_us_tax_keyword_in_desc = any(kw in desc for kw in us_tax_desc_keywords)
 
-    # FINAL GATE: Description MUST have at least one of these core identifiers
-    core_identifiers = ["us tax", "us taxation", "irs", "form 1040", "dor", "department of revenue", "tax return", "federal tax"]
-    has_core_identifier = any(identifier in desc for identifier in core_identifiers)
-
-    # HYBRID + GATING:
-    # 1. Accept if title matches (already curated 100 titles)
-    # 2. OR accept if has core identifier + (form OR tax keyword in description)
-    # This prevents false positives from generic job descriptions
-    if has_matching_title or has_catchall_title:
-        return True
-
-    if has_core_identifier and (has_form_in_desc or has_us_tax_keyword_in_desc):
-        return True
-
-    return False
+    # Accept if core identifier + (form OR tax keyword in description)
+    return has_form_in_desc or has_us_tax_keyword_in_desc
 
 
 def load_state():
