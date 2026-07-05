@@ -62,6 +62,30 @@ def is_valid_us_tax_job(job):
     return bool(US_STATES.search(full))
 
 
+def is_india_location(job):
+    """Return True only if job is India/Remote — reject other countries."""
+    loc = job.get("location", "").lower()
+
+    india_keywords = [
+        "india", "remote", "hyderabad", "bangalore", "bengaluru", "chennai",
+        "mumbai", "pune", "delhi", "gurgaon", "noida", "kolkata", "ahmedabad",
+        "jaipur", "indore", "chandigarh", "kochi", "coimbatore", "lucknow"
+    ]
+
+    reject_keywords = [
+        "usa", "united states", "canada", "uk", "australia", "europe", "egypt",
+        "middle east", "africa", "singapore", "malaysia"
+    ]
+
+    if any(kw in loc for kw in reject_keywords):
+        return False
+
+    if any(kw in loc for kw in india_keywords) or not loc or loc.strip() == "":
+        return True
+
+    return False
+
+
 def is_us_tax_job(job):
     title = job.get("title", "").lower()
     company = job.get("company", "").lower()
@@ -333,8 +357,12 @@ def main():
     print(f"DEBUG: Total jobs scraped: {len(jobs)}")
     log(f"Total jobs scraped: {len(jobs)}")
 
-    us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
-    log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total jobs.")
+    india_jobs = [j for j in jobs if is_india_location(j)]
+    log(f"India/Remote: {len(india_jobs)} out of {len(jobs)} total.")
+    print(f"DEBUG: India jobs: {len(india_jobs)}")
+
+    us_tax_jobs = [j for j in india_jobs if is_us_tax_job(j)]
+    log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(india_jobs)} India/Remote jobs.")
     print(f"DEBUG: US Tax jobs: {len(us_tax_jobs)}")
 
     new_jobs = [j for j in us_tax_jobs if _dedup_key(j) not in seen]
