@@ -171,8 +171,8 @@ def is_us_tax_job(job):
     # Count keywords found in description
     keyword_count = sum(1 for kw in us_tax_keywords if kw in desc)
 
-    # Accept if 3+ keywords found in description
-    return keyword_count >= 3
+    # Accept if 1+ keywords found in description (any match = relevant job)
+    return keyword_count >= 1
 
 
 def load_state():
