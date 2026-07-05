@@ -153,37 +153,43 @@ def is_us_tax_job(job):
     if has_indian_tax:
         return False
 
-    # CORE IDENTIFIERS - Description MUST have one of these
-    core_identifiers = ["us tax", "us taxation", "irs", "form 1040", "dor", "department of revenue", "tax return", "federal tax"]
-    has_core_identifier = any(identifier in desc for identifier in core_identifiers)
-
-    if not has_core_identifier:
-        return False
-
-    # 50 US Tax Preparation Keywords in description
-    form_numbers = ["1040", "1041", "1120", "1120s", "1065", "w-2", "1099", "schedule c", "schedule e", "schedule k-1", "1040nr"]
-
-    us_tax_desc_keywords = [
-        # Core Tax Keywords
-        "form 1040", "form 1041", "form 1120", "form 1120s", "form 1065",
-        "federal tax return", "state tax return", "tax withholding",
-        # Software Keywords
+    # 100 US Tax Preparation Keywords
+    us_tax_keywords = [
+        # Tax Forms (1-20)
+        "form 1040", "form 1040nr", "form 1040sr", "form 1041", "form 1120",
+        "form 1120s", "form 1065", "form 990", "form 1099", "w-2",
+        "schedule a", "schedule b", "schedule c", "schedule d", "schedule e",
+        "schedule f", "schedule k-1", "schedule se", "form 2441", "form 8863",
+        # IRS / Regulatory (21-35)
+        "irs", "irs guidelines", "irs regulations", "department of revenue", "dor",
+        "federal tax", "state tax", "tax compliance", "tax law", "tax code",
+        "tax reform", "tax withholding", "tax liability", "tax deductions", "tax credits",
+        # Preparation Keywords (36-50)
+        "tax preparation", "tax return preparation", "tax filing", "tax review", "tax reviewer",
+        "tax return review", "quality review", "tax advisory", "client returns", "tax planning",
+        "tax research", "tax compliance review", "return review", "tax processing", "tax engagement",
+        # Software (51-65)
         "lacerte", "proseries", "gosystem", "onesource", "ultratax",
         "cch axcess", "prosystem fx", "drake", "atx", "taxwise",
-        # Process Keywords
-        "tax preparation", "tax filing", "tax compliance", "tax returns", "tax review",
-        "tax advisory", "client tax returns", "electronic filing", "paper filing", "tax deductions",
-        # Domain Keywords
-        "individual tax", "corporate tax", "partnership tax", "s-corporation tax", "fiduciary tax",
-        "non-resident tax", "standard deduction", "itemized deduction", "tax credits", "amt",
-        "fica", "fbar", "fatca", "tax liability", "tax preparer"
+        "taxact", "taxslayer", "proconnect", "crosslink", "h&r block software",
+        # Entity Types (66-75)
+        "individual tax", "corporate tax", "partnership tax", "s-corporation", "fiduciary tax",
+        "non-resident tax", "exempt organization", "trust tax", "estate tax", "self-employed tax",
+        # Income Types (76-85)
+        "w-2 income", "1099 income", "rental income", "business income", "capital gains",
+        "dividend income", "interest income", "self-employment income", "foreign income", "passive income",
+        # Combination Keywords (86-100)
+        "1040 preparation", "1040 review", "1041 preparation", "1065 review", "1120 preparation",
+        "w-2 processing", "1099 processing", "irs compliance review", "federal state tax preparation",
+        "individual corporate tax", "tax return qa", "tax software review", "multi-state tax filing",
+        "tax deadline compliance", "client tax advisory"
     ]
 
-    has_form_in_desc = any(fn in desc for fn in form_numbers)
-    has_us_tax_keyword_in_desc = any(kw in desc for kw in us_tax_desc_keywords)
+    # Count keywords found in description
+    keyword_count = sum(1 for kw in us_tax_keywords if kw in desc)
 
-    # Accept if core identifier + (form OR tax keyword in description)
-    return has_form_in_desc or has_us_tax_keyword_in_desc
+    # Accept if 3+ keywords found (means it's genuinely a tax job)
+    return keyword_count >= 3
 
 
 def load_state():
