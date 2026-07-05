@@ -3,17 +3,16 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8714105853:AAEBU3JWHAV8mk17MjSLTYh8W2QO2I-1cts")
 CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")
 
-# 7 optimized search keywords (1 from each category of 100-keyword list)
-# Fast + comprehensive: gets jobs from all categories
-# Filtering: 1+ keyword from 100-list in description → POST
+# 7 search keywords - one from each category (positions 2,22,37,52,67,77,87)
+# Filtering: if description has ANY 1 of these keywords → POST
 KEYWORDS = [
-    "Form 1040",        # Tax Forms (1-20)
-    "IRS",              # IRS/Regulatory (21-35)
-    "Tax Preparation",  # Preparation (36-50)
-    "Lacerte",          # Software (51-65)
-    "Corporate Tax",    # Entity Types (66-75)
-    "1099 Income",      # Income Types (76-85)
-    "Tax Return QA",    # Combinations (86-100)
+    "form 1040nr",           # Position 2 (Tax Forms 1-20)
+    "irs guidelines",        # Position 22 (IRS/Regulatory 21-35)
+    "tax return preparation", # Position 37 (Preparation 36-50)
+    "proseries",             # Position 52 (Software 51-65)
+    "corporate tax",         # Position 67 (Entity Types 66-75)
+    "1099 income",           # Position 77 (Income Types 76-85)
+    "1040 preparation",      # Position 87 (Combinations 86-100)
 ]
 
 # India cities ONLY - metro + tier-2 cities
