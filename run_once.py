@@ -35,9 +35,55 @@ BLOCKLIST = re.compile(
     r"us\s*it\s*recruiter|it\s*recruiter|"
     r"software\s*engineer(?!\s*tax)|software\s*developer(?!\s*tax)|"
     r"selenium|automation\s*tester|manual\s*tester|"
-    r"\bgst\b|\bvat\b|goods\s*and\s*services\s*tax|"
     r"payroll(?!\s*tax)|accounts\s*payable|accounts\s*receivable|"
-    r"statutory\s*audit|business\s*development|sales\s*executive"
+    r"statutory\s*audit|business\s*development|sales\s*executive|"
+    # Indian tax roles - GST (1-10)
+    r"\bgst\b|goods\s*and\s*services\s*tax|gstn|gst\s*compliance|gst\s*specialist|gst\s*manager|gst\s*consultant|gst\s*filing|gst\s*returns|gst\s*audit|gst\s*advisory|"
+    # Income Tax India (11-20)
+    r"income\s*tax\s*(?!withholding)|income\s*tax\s*consultant|income\s*tax\s*executive|"
+    r"direct\s*tax(?!\s*analyst\s*(?:us|federal|state))|india\s*tax|domestic\s*tax|indian\s*tax|"
+    # TDS / TCS (21-25)
+    r"\btds\b|\btcs\b|tax\s*deducted|tax\s*collected|tds\s*analyst|tds\s*filing|"
+    # Indirect Tax India (26-35)
+    r"indirect\s*tax(?!\s*analyst\s*(?:us|federal))|"
+    r"\bvat\b(?!\s*us)|service\s*tax|excise\s*duty|customs\s*duty|"
+    r"transfer\s*pricing|tax\s*litigation|"
+    # CA / Finance Related (36-45)
+    r"chartered\s*accountant|ca\s*article|ca\s*analyst|"
+    r"(?<!us\s)(?<!federal\s)finance\s*analyst(?!\s*us)|accounts\s*analyst|^accountant$|"
+    r"financial\s*analyst(?!\s*(?:us|tax))|finance\s*executive|accounts\s*executive|"
+    # Other Indian Tax (46-50)
+    r"tax\s*auditor|statutory\s*compliance|tax\s*compliance\s*executive(?!\s*us)"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# STRICT: Reject all Indian tax roles - no US Tax jobs should have these keywords
+INDIAN_TAX_BLOCKLIST = re.compile(
+    r"\b("
+    # GST Related (1-10)
+    r"gst\s*analyst|gst\s*compliance|gst\s*executive|gst\s*specialist|gst\s*manager|"
+    r"gst\s*consultant|gst\s*filing|gst\s*returns|gst\s*audit|gst\s*advisory|"
+    # Income Tax India (11-20)
+    r"income\s*tax\s*analyst|income\s*tax\s*consultant|income\s*tax\s*executive|"
+    r"direct\s*tax\s*analyst|direct\s*tax\s*consultant|direct\s*tax\s*manager|"
+    r"india\s*tax\s*analyst|india\s*tax\s*consultant|domestic\s*tax|"
+    # TDS / TCS (21-25)
+    r"tds\s*analyst|tds\s*compliance|tcs\s*analyst|tds\s*executive|tds\s*filing|"
+    # Indirect Tax India (26-35)
+    r"indirect\s*tax\s*analyst|indirect\s*tax\s*consultant|indirect\s*tax\s*manager|"
+    r"vat\s*analyst|service\s*tax|excise\s*duty|customs\s*duty|"
+    r"tax\s*litigation|indirect\s*tax\s*specialist|"
+    # Other Indian Tax (46-50)
+    r"tax\s*auditor|tax\s*litigation\s*specialist|transfer\s*pricing|"
+    r"tax\s*compliance\s*executive|statutory\s*compliance|"
+    # Keywords that indicate Indian context
+    r"itr|itr-1|itr-2|itr-3|itr-4|itr-5|itr-6|itr-7|"
+    r"form\s*16|form\s*16a|form\s*24q|"
+    r"pan\s*number|aadhar|aadhaar|cin|gstin|"
+    r"goods\s*and\s*services\s*tax|section\s*80|fy20[0-9]{2}|ay20[0-9]{2}|"
+    r"tds|tcs|advance\s*tax|challan|saral|"
+    r"indian\s*tax|india\s*tax|ato"
     r")\b",
     re.IGNORECASE,
 )
