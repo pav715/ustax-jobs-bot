@@ -3,15 +3,19 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8714105853:AAEBU3JWHAV8mk17MjSLTYh8W2QO2I-1cts")
 CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")  # Already correct
 
-# 18 keywords x 8 locations = 144 combinations (kept under ~150 for hourly runs).
-# Near-duplicates merged: "Tax Analyst" covers "US Tax Analyst"; "Tax Associate"
-# covers "US Tax Associate" / "Senior Tax Associate"; "1040 Tax" etc. anchor forms.
+# Search exact tax role titles to catch jobs with these roles
+# Filter by description (form numbers + US Tax keywords) to avoid Indian tax jobs
 KEYWORDS = [
-    "1040",
-    "1041",
-    "1065",
-    "1120",
+    "Tax Accountant",
+    "Tax Analyst",
+    "Tax Manager",
+    "Tax Preparer",
+    "Tax Associate",
+    "Tax Consultant",
+    "Tax Specialist",
+    "Tax Compliance",
     "Enrolled Agent",
+    "Tax Attorney",
     "IRS",
 ]
 
