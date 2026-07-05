@@ -6,6 +6,10 @@ CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")  # Already correct
 # Search core US Tax role titles - streamlined for better matching
 # Filter by description (form numbers + US Tax keywords) to avoid Indian tax jobs
 KEYWORDS = [
+    # Catchall - matches any "US Tax XXX" or "US Taxation XXX" role
+    "US Tax",
+    "US Taxation",
+
     # Tax Preparer Level
     "US Tax Preparer",
     "Tax Associate",
