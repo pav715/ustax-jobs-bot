@@ -3,32 +3,35 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8714105853:AAEBU3JWHAV8mk17MjSLTYh8W2QO2I-1cts")
 CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")
 
-# ONE mega search query with all 100 keywords (LinkedIn searches for ANY match)
-# Much faster: 1 search per location instead of 100 searches
+# PHASE 1: Positions 1-10 from each section (100% of 7 sections)
+# Posts job if ANY keyword found in description
 KEYWORDS = [
-    "Form 1040 Form 1040NR Form 1040SR Form 1041 Form 1120 Form 1120S Form 1065 Form 990 Form 1099 W-2 Schedule A Schedule B Schedule C Schedule D Schedule E Schedule F Schedule K-1 Schedule SE Form 2441 Form 8863 IRS IRS Guidelines IRS Regulations Department of Revenue DOR Federal Tax State Tax Tax Compliance Tax Law Tax Code Tax Reform Tax Withholding Tax Liability Tax Deductions Tax Credits Tax Preparation Tax Return Preparation Tax Filing Tax Review Tax Reviewer Tax Return Review Quality Review Tax Advisory Client Returns Tax Planning Tax Research Tax Compliance Review Return Review Tax Processing Tax Engagement Lacerte ProSeries GoSystem ONESOURCE UltraTax CCH Axcess ProSystem fx Drake ATX TaxWise TaxAct TaxSlayer ProConnect CrossLink H&R Block Software Individual Tax Corporate Tax Partnership Tax S-Corporation Fiduciary Tax Non-Resident Tax Exempt Organization Trust Tax Estate Tax Self-Employed Tax W-2 Income 1099 Income Rental Income Business Income Capital Gains Dividend Income Interest Income Self-Employment Income Foreign Income Passive Income 1040 Preparation 1040 Review 1041 Preparation 1065 Review 1120 Preparation W-2 Processing 1099 Processing IRS Compliance Review Federal State Tax Preparation Individual Corporate Tax Tax Return QA Tax Software Review Multi-State Tax Filing Tax Deadline Compliance Client Tax Advisory"
+    # Position 1 from each section
+    "Form 1040", "IRS", "Tax Preparation", "Lacerte", "Individual Tax", "W-2 Income", "1040 Preparation",
+    # Position 2
+    "Form 1040NR", "IRS Guidelines", "Tax Return Preparation", "ProSeries", "Corporate Tax", "1099 Income", "1040 Review",
+    # Position 3
+    "Form 1040SR", "IRS Regulations", "Tax Filing", "GoSystem", "Partnership Tax", "Rental Income", "1041 Preparation",
+    # Position 4
+    "Form 1041", "Department of Revenue", "Tax Review", "ONESOURCE", "S-Corporation", "Business Income", "1065 Review",
+    # Position 5
+    "Form 1120", "DOR", "Tax Reviewer", "UltraTax", "Fiduciary Tax", "Capital Gains", "1120 Preparation",
+    # Position 6
+    "Form 1120S", "Federal Tax", "Tax Return Review", "CCH Axcess", "Non-Resident Tax", "Dividend Income", "W-2 Processing",
+    # Position 7
+    "Form 1065", "State Tax", "Quality Review", "ProSystem fx", "Exempt Organization", "Interest Income", "1099 Processing",
+    # Position 8
+    "Form 990", "Tax Compliance", "Tax Advisory", "Drake", "Trust Tax", "Self-Employment Income", "IRS Compliance Review",
+    # Position 9
+    "Form 1099", "Tax Law", "Client Returns", "ATX", "Estate Tax", "Foreign Income", "Federal State Tax Preparation",
+    # Position 10
+    "W-2", "Tax Code", "Tax Planning", "TaxWise", "Self-Employed Tax", "Passive Income", "Individual Corporate Tax",
 ]
 
 # India cities ONLY - metro + tier-2 cities
 LOCATIONS = [
-    # Metro cities (Tier-1)
-    "Bangalore",
-    "Hyderabad",
-    "Mumbai",
-    "Delhi",
-    "Pune",
-    "Chennai",
-    "Kolkata",
-    # State capitals & major cities (Tier-2)
-    "Gurgaon",
-    "Noida",
-    "Ahmedabad",
-    "Chandigarh",
-    "Jaipur",
-    "Kochi",
-    "Coimbatore",
-    "Indore",
-    "Lucknow",
+    "Bangalore", "Hyderabad", "Mumbai", "Delhi", "Pune", "Chennai", "Kolkata",
+    "Gurgaon", "Noida", "Ahmedabad", "Chandigarh", "Jaipur", "Kochi", "Coimbatore", "Indore", "Lucknow",
 ]
 
 MAX_JOBS_PER_CYCLE = 15
