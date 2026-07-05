@@ -11,10 +11,7 @@ KEYWORDS = [
     "1041",
     "1065",
     "1120",
-    "US Tax Preparer",
-    "US Tax Analyst",
     "Enrolled Agent",
-    "CPA Tax",
     "IRS",
 ]
 
