@@ -188,16 +188,8 @@ def is_us_tax_job(job):
     # Count keywords found in description
     keyword_count = sum(1 for kw in us_tax_keywords if kw in desc)
 
-    # Accept if 3+ keywords found (means it's genuinely a tax job)
-    if keyword_count >= 3:
-        return True
-
-    # Also accept if "us tax" or "us taxation" appears in description (backup rule)
-    # This catches legitimate US tax jobs that might have fewer than 3 specific keywords
-    if "us tax" in desc or "us taxation" in desc:
-        return True
-
-    return False
+    # Accept if 3+ keywords found in description
+    return keyword_count >= 3
 
 
 def load_state():
