@@ -26,6 +26,20 @@ KEYWORDS = [
     "Tax Senior",
     "Tax Quality Reviewer",
     "Tax Compliance Specialist",
+
+    # Tax QA / E-File / Technical Level
+    "Tax QA E-File Analyst",
+    "Associate QA E-File Analyst",
+    "Tax Software QA Analyst",
+    "E-File Compliance Analyst",
+    "XML Schema Analyst",
+    "Tax Schema Developer",
+    "ATS Analyst",
+    "Tax Software Tester",
+    "Regulatory QA Analyst",
+    "Tax Compliance QA",
+    "State Tax E-File Analyst",
+    "Tax Form QA Analyst",
 ]
 
 # India US-Tax delivery hubs + remote. "India" already covers smaller hubs
