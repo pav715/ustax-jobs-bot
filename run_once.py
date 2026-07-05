@@ -133,63 +133,94 @@ def is_india_location(job):
 
 
 def is_us_tax_job(job):
+    """STRICT: Accept only if title matches one of the 100 role titles (from config.KEYWORDS)."""
     title = job.get("title", "").lower()
     company = job.get("company", "").lower()
     desc = job.get("description", "").lower()
     full = f"{title} {company} {desc}"
 
+    # Reject if blocklist matches
     if BLOCKLIST.search(title):
         return False
 
-    form_numbers = ["1040", "1041", "1120", "1065", "1099", "w-2"]
-    us_specific_keywords = [
-        "enrolled agent", "ea", "cpa", "irs", "internal revenue",
-        "us tax", "us taxation", "united states tax"
-    ]
-
-    common_tax_roles = [
-        "tax preparer", "tax analyst", "tax accountant", "tax associate",
-        "tax manager", "tax director", "tax consultant", "tax specialist",
-        "tax compliance", "tax auditor"
-    ]
-
+    # Reject if has Indian tax keywords
     indian_tax_keywords = [
-        # Indian tax forms
-        "itr", "itr-1", "itr-2", "itr-3", "itr-4", "itr-5", "itr-6", "itr-7",
-        "gst", "goods and services tax", "gstn",
-        "vat", "value added tax",
-        "income tax", "it return", "it analyst",
-        # Indian taxation terms
-        "indian tax", "india tax", "indian taxation",
-        "ato", "inr", "rupee",
-        "section 80", "fy2024", "ay2024",
-        "tds", "tcs", "advance tax",
-        "form 16", "form 16a", "form 24q",
-        "challan", "e-filing", "saral",
-        "aadhar", "pan", "cin",
-        "goods and services", "indirect tax",
-        "customs duty", "excise"
+        "itr", "gst", "vat", "income tax", "tds", "tcs",
+        "indian tax", "india tax", "service tax", "excise duty",
+        "transfer pricing", "indirect tax"
     ]
-
-    has_form_number = any(fn in full for fn in form_numbers)
-    has_form_in_desc = any(fn in desc for fn in form_numbers)
-    has_us_keyword = any(kw in full for kw in us_specific_keywords)
-    has_common_role = any(role in title for role in common_tax_roles)
     has_indian_tax = any(kw in full for kw in indian_tax_keywords)
-
-    # REJECT if has ANY Indian tax keyword — strict filter
     if has_indian_tax:
         return False
 
-    # Accept if has form numbers OR US-specific keywords in full text
-    if has_form_number or has_us_keyword:
-        return True
+    # STRICT MATCHING: Title MUST contain one of the 100 keywords from config
+    target_keywords = [
+        # Tax Preparer (1-15)
+        "us tax preparer", "tax preparer", "senior tax preparer",
+        "individual tax preparer", "tax return preparer",
+        "tax preparation specialist", "tax filing specialist",
+        "tax preparation analyst", "tax return specialist",
+        "federal tax preparer", "state tax preparer",
+        "tax preparer associate", "tax preparer consultant",
+        "tax filer", "tax filing analyst",
+        # Tax Analyst (16-30)
+        "tax analyst", "us tax analyst", "senior tax analyst",
+        "tax compliance analyst", "us tax compliance analyst",
+        "federal tax analyst", "state tax analyst",
+        "tax research analyst", "tax technical analyst",
+        "tax data analyst", "tax operations analyst",
+        "tax process analyst", "tax reporting analyst",
+        "tax planning analyst", "tax advisory analyst",
+        # Tax Reviewer (31-40)
+        "tax reviewer", "senior tax reviewer", "tax review analyst",
+        "tax quality reviewer", "tax review specialist",
+        "tax return reviewer", "tax compliance reviewer",
+        "tax audit reviewer", "tax technical reviewer",
+        "tax senior reviewer",
+        # Tax Associate (41-50)
+        "tax associate", "senior tax associate", "tax associate analyst",
+        "us tax associate", "tax staff associate",
+        "tax associate consultant", "tax associate specialist",
+        "junior tax associate", "tax process associate",
+        "tax compliance associate",
+        # Tax Consultant (51-60)
+        "tax consultant", "us tax consultant", "senior tax consultant",
+        "tax advisory consultant", "tax compliance consultant",
+        "tax technology consultant", "tax process consultant",
+        "tax planning consultant", "tax transformation consultant",
+        "tax digital consultant",
+        # Tax Senior / Manager (61-75)
+        "tax senior", "us tax senior", "senior tax specialist",
+        "tax manager", "us tax manager", "senior tax manager",
+        "tax compliance manager", "tax operations manager",
+        "tax planning manager", "tax reporting manager",
+        "tax supervisor", "tax team lead",
+        "tax practice manager", "tax engagement manager",
+        "tax process manager",
+        # Tax Specialist (76-85)
+        "tax specialist", "us tax specialist", "senior tax specialist",
+        "tax compliance specialist", "tax filing specialist",
+        "tax regulatory specialist", "tax operations specialist",
+        "tax technology specialist", "tax research specialist",
+        "tax advisory specialist",
+        # US Taxation (86-100)
+        "us taxation analyst", "us taxation associate",
+        "us taxation consultant", "us taxation specialist",
+        "us taxation manager", "us taxation senior",
+        "us individual tax analyst", "us corporate tax analyst",
+        "us partnership tax analyst", "us international tax analyst",
+        "us indirect tax analyst", "us direct tax analyst",
+        "us tax compliance specialist", "us tax filing analyst",
+        "us tax operations analyst"
+    ]
 
-    # Accept if common tax role title AND form numbers MUST be in description
-    if has_common_role and has_form_in_desc:
-        return True
+    # Check if title contains any of the 100 keywords
+    has_matching_title = any(kw in title for kw in target_keywords)
 
-    return False
+    # Also accept if has "US Tax" or "US Taxation" catchall
+    has_catchall = "us tax" in title or "us taxation" in title
+
+    return has_matching_title or has_catchall
 
 
 def load_state():
