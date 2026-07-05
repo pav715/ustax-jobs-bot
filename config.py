@@ -3,81 +3,14 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8714105853:AAEBU3JWHAV8mk17MjSLTYh8W2QO2I-1cts")
 CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")  # Already correct
 
-# 100 US Tax Preparation roles + 2 catchall
-# Focus: Tax Preparation, Filing, Compliance, Analysis across all levels
+# Generic search terms - filter by description keywords (3+ matches required)
+# Do NOT use specific role titles - let description filtering find relevant jobs
 KEYWORDS = [
-    # Catchall - matches any "US Tax XXX" or "US Taxation XXX" role
-    "US Tax",
-    "US Taxation",
-
-    # Tax Preparer (1-15)
-    "US Tax Preparer",
-    "Tax Preparer",
-    "Senior Tax Preparer",
-    "Individual Tax Preparer",
-    "Tax Return Preparer",
-    "Tax Preparation Specialist",
-    "Tax Filing Specialist",
-    "Tax Preparation Analyst",
-    "Tax Return Specialist",
-    "Federal Tax Preparer",
-    "State Tax Preparer",
-    "Tax Preparer Associate",
-    "Tax Preparer Consultant",
-    "Tax Filer",
-    "Tax Filing Analyst",
-
-    # Tax Analyst (16-30)
-    "Tax Analyst",
-    "US Tax Analyst",
-    "Senior Tax Analyst",
-    "Tax Compliance Analyst",
-    "US Tax Compliance Analyst",
-    "Federal Tax Analyst",
-    "State Tax Analyst",
-    "Tax Research Analyst",
-    "Tax Technical Analyst",
-    "Tax Data Analyst",
-    "Tax Operations Analyst",
-    "Tax Process Analyst",
-    "Tax Reporting Analyst",
-    "Tax Planning Analyst",
-    "Tax Advisory Analyst",
-
-    # Tax Reviewer (31-40)
-    "Tax Reviewer",
-    "Senior Tax Reviewer",
-    "Tax Review Analyst",
-    "Tax Quality Reviewer",
-    "Tax Review Specialist",
-    "Tax Return Reviewer",
-    "Tax Compliance Reviewer",
-    "Tax Audit Reviewer",
-    "Tax Technical Reviewer",
-    "Tax Senior Reviewer",
-
-    # Tax Associate (41-50)
-    "Tax Associate",
-    "Senior Tax Associate",
-    "Tax Associate Analyst",
-    "US Tax Associate",
-    "Tax Staff Associate",
-    "Tax Associate Consultant",
-    "Tax Associate Specialist",
-    "Junior Tax Associate",
-    "Tax Process Associate",
-    "Tax Compliance Associate",
-
-    # Tax Consultant (51-60)
-    "Tax Consultant",
-    "US Tax Consultant",
-    "Senior Tax Consultant",
-    "Tax Advisory Consultant",
-    "Tax Compliance Consultant",
-    "Tax Technology Consultant",
-    "Tax Process Consultant",
-    "Tax Planning Consultant",
-    "Tax Transformation Consultant",
+    "tax",
+    "preparation",
+    "filing",
+    "compliance",
+]
     "Tax Digital Consultant",
 
     # Tax Senior / Manager (61-75)
