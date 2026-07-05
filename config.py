@@ -22,13 +22,6 @@ KEYWORDS = [
 # (Kochi, Coimbatore, Ahmedabad, Noida, etc.) via LinkedIn's country search,
 # and INDIA_LOCATION in run_once.py keeps those cities in the results.
 LOCATIONS = [
-    "India",
-    "Hyderabad",
-    "Bangalore",
-    "Chennai",
-    "Mumbai",
-    "Pune",
-    "Gurgaon",
     "Remote",
 ]
 
