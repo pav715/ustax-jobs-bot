@@ -136,36 +136,27 @@ def is_us_tax_job(job):
     """DESCRIPTION-ONLY: Accept if description has 3+ keywords from the 100-keyword list."""
     desc = job.get("description", "").lower()
 
-    # 100 US Tax Preparation Keywords
+    # 100 US Tax Filter Keywords - if ANY 1 found in description → POST
     us_tax_keywords = [
         # Tax Forms (1-20)
-        "form 1040", "form 1040nr", "form 1040sr", "form 1041", "form 1120",
-        "form 1120s", "form 1065", "form 990", "form 1099", "w-2",
-        "schedule a", "schedule b", "schedule c", "schedule d", "schedule e",
-        "schedule f", "schedule k-1", "schedule se", "form 2441", "form 8863",
-        # IRS / Regulatory (21-35)
-        "irs", "irs guidelines", "irs regulations", "department of revenue", "dor",
-        "federal tax", "state tax", "tax compliance", "tax law", "tax code",
-        "tax reform", "tax withholding", "tax liability", "tax deductions", "tax credits",
-        # Preparation Keywords (36-50)
-        "tax preparation", "tax return preparation", "tax filing", "tax review", "tax reviewer",
-        "tax return review", "quality review", "tax advisory", "client returns", "tax planning",
-        "tax research", "tax compliance review", "return review", "tax processing", "tax engagement",
-        # Software (51-65)
-        "lacerte", "proseries", "gosystem", "onesource", "ultratax",
-        "cch axcess", "prosystem fx", "drake", "atx", "taxwise",
-        "taxact", "taxslayer", "proconnect", "crosslink", "h&r block software",
-        # Entity Types (66-75)
-        "individual tax", "corporate tax", "partnership tax", "s-corporation", "fiduciary tax",
-        "non-resident tax", "exempt organization", "trust tax", "estate tax", "self-employed tax",
-        # Income Types (76-85)
-        "w-2 income", "1099 income", "rental income", "business income", "capital gains",
-        "dividend income", "interest income", "self-employment income", "foreign income", "passive income",
-        # Combination Keywords (86-100)
-        "1040 preparation", "1040 review", "1041 preparation", "1065 review", "1120 preparation",
-        "w-2 processing", "1099 processing", "irs compliance review", "federal state tax preparation",
-        "individual corporate tax", "tax return qa", "tax software review", "multi-state tax filing",
-        "tax deadline compliance", "client tax advisory"
+        "form 1040", "form 1041", "form 1120", "form 1120s", "form 1065", "form 990", "1040nr", "1040sr",
+        "schedule a", "schedule b", "schedule c", "schedule d", "schedule e", "schedule f", "schedule k-1", "w-2", "1099", "w-4", "1098", "1095",
+        # IRS / Regulatory (21-30)
+        "irs", "dor", "department of revenue", "federal tax", "state tax", "tax law", "tax code", "irs regulations", "irs guidelines", "irs compliance",
+        # Preparation / Review (31-40)
+        "tax preparation", "tax return", "tax filing", "tax review", "tax reviewer", "tax preparer", "return preparation", "tax processing", "tax advisory", "client returns",
+        # Software (41-55)
+        "lacerte", "proseries", "gosystem", "onesource", "ultratax", "cch axcess", "prosystem fx", "drake", "atx", "taxwise", "taxact", "taxslayer", "proconnect", "crosslink", "h&r block software",
+        # Entity Types (56-65)
+        "individual tax", "corporate tax", "partnership tax", "s-corporation", "fiduciary tax", "non-resident tax", "trust tax", "estate tax", "exempt organization", "self-employed",
+        # Income Types (66-75)
+        "w-2 income", "1099 income", "rental income", "capital gains", "business income", "dividend income", "interest income", "foreign income", "passive income", "self-employment income",
+        # Compliance (76-85)
+        "tax compliance", "tax regulations", "multi-state filing", "federal compliance", "state compliance", "tax deadline", "tax withholding", "tax liability", "tax deductions", "tax credits",
+        # Process (86-95)
+        "tax engagement", "tax planning", "tax research", "tax analysis", "tax consulting", "quality review", "tax audit", "tax documentation", "client interaction", "tax strategy",
+        # Tools (96-100)
+        "excel", "ms office", "quickbooks", "lacerte software", "tax software",
     ]
 
     # Count keywords found in description
