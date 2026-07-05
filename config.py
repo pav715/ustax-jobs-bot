@@ -23,6 +23,22 @@ KEYWORDS = [
 # and INDIA_LOCATION in run_once.py keeps those cities in the results.
 LOCATIONS = [
     "Remote",
+    "Hyderabad",
+    "Bangalore",
+    "Chennai",
+    "Mumbai",
+    "Pune",
+    "Gurgaon",
+    "Noida",
+    "Delhi",
+    "Kolkata",
+    "Ahmedabad",
+    "Jaipur",
+    "Indore",
+    "Chandigarh",
+    "Kochi",
+    "Coimbatore",
+    "Lucknow",
 ]
 
 MAX_JOBS_PER_CYCLE = 15
