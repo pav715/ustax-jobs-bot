@@ -65,46 +65,35 @@ def is_valid_us_tax_job(job):
 def is_us_tax_job(job):
     title = job.get("title", "").lower()
     company = job.get("company", "").lower()
+    desc = job.get("description", "").lower()
+    full = f"{title} {company} {desc}"
 
     if BLOCKLIST.search(title):
         return False
 
-    keywords = [
-        # Core Tax Roles
-        "tax associate", "tax analyst", "tax consultant", "tax manager", "tax accountant",
-        "tax auditor", "tax preparer", "tax advisor", "tax specialist", "tax senior",
-        "tax director", "tax officer", "tax coordinator", "taxation manager",
-
-        # Specific Tax Functions
-        "payroll specialist", "payroll tax", "tax operations", "tax documentation",
-        "tax reporting", "tax compliance", "tax planning", "tax risk", "tax process",
-        "tax technology", "tax litigation", "tax research",
-
-        # Tax Types
-        "corporate tax", "international tax", "indirect tax", "us tax", "us taxation",
-        "direct tax", "sales tax", "estate tax", "gift tax", "excise tax",
-        "global mobility", "transfer pricing", "m&a tax", "cross-border",
-
-        # Specialized Areas
-        "private client", "estates", "trusts", "wealth management", "family office",
-        "expatriate tax", "expat tax", "high net worth", "hnw",
-
-        # Tax Forms & IRS
-        "1040", "1041", "1120", "1065", "1099", "w-2", "irs", "irb",
-        "enrolled agent", "cpa", "ca", "ea", "aicpa",
-
-        # Compliance & Reporting
-        "compliance", "filing", "e-file", "audit", "reporting", "documentation",
-        "advisor", "adviser", "advisory", "consulting", "consulting", "big 4",
-
-        # Additional Keywords
-        "gst", "vat", "financial", "accounting", "finance", "ato",
-        "atp", "tax audit", "tax return", "partnership", "s-corp"
+    us_specific_keywords = [
+        "1040", "1041", "1120", "1065", "1099", "w-2",
+        "enrolled agent", "ea", "cpa", "irs", "internal revenue",
+        "us tax", "us taxation", "united states tax",
+        "big 4", "cpa firm", "tax firm"
     ]
 
-    for keyword in keywords:
-        if keyword in title or keyword in company:
-            return True
+    common_tax_keywords = [
+        "tax accountant", "tax analyst", "tax associate", "tax assistant",
+        "tax manager", "tax director", "tax supervisor", "tax auditor",
+        "tax preparer", "tax advisor", "tax consultant", "tax specialist",
+        "tax compliance", "tax planning", "tax operations", "tax reporting",
+        "compliance specialist", "audit", "accounting"
+    ]
+
+    has_us_specific = any(kw in full for kw in us_specific_keywords)
+    has_common_tax = any(kw in title for kw in common_tax_keywords)
+
+    if has_us_specific:
+        return True
+
+    if has_common_tax and "gst" not in full and "goods and services" not in full:
+        return True
 
     return False
 
