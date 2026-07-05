@@ -3,37 +3,36 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "8714105853:AAEBU3JWHAV8mk17MjSLTYh8W2QO2I-1cts")
 CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")
 
-# ALL 100 keywords (positions 1-100) - comprehensive coverage
-# If description has ANY 1 keyword → POST (broader net)
+# ALL 100 exact keywords from user's list - any 1 keyword in description → POST
 KEYWORDS = [
-    # Tax Forms (1-20)
-    "form 1040", "form 1040nr", "form 1040sr", "form 1041", "form 1120",
-    "form 1120s", "form 1065", "form 990", "form 1099", "w-2",
-    "schedule a", "schedule b", "schedule c", "schedule d", "schedule e",
-    "schedule f", "schedule k-1", "schedule se", "form 2441", "form 8863",
-    # IRS / Regulatory (21-35)
-    "irs", "irs guidelines", "irs regulations", "department of revenue", "dor",
-    "federal tax", "state tax", "tax compliance", "tax law", "tax code",
-    "tax reform", "tax withholding", "tax liability", "tax deductions", "tax credits",
-    # Preparation Keywords (36-50)
-    "tax preparation", "tax return preparation", "tax filing", "tax review", "tax reviewer",
-    "tax return review", "quality review", "tax advisory", "client returns", "tax planning",
-    "tax research", "tax compliance review", "return review", "tax processing", "tax engagement",
-    # Software (51-65)
-    "lacerte", "proseries", "gosystem", "onesource", "ultratax",
-    "cch axcess", "prosystem fx", "drake", "atx", "taxwise",
-    "taxact", "taxslayer", "proconnect", "crosslink", "h&r block software",
-    # Entity Types (66-75)
-    "individual tax", "corporate tax", "partnership tax", "s-corporation", "fiduciary tax",
-    "non-resident tax", "exempt organization", "trust tax", "estate tax", "self-employed tax",
-    # Income Types (76-85)
-    "w-2 income", "1099 income", "rental income", "business income", "capital gains",
-    "dividend income", "interest income", "self-employment income", "foreign income", "passive income",
-    # Combination Keywords (86-100)
-    "1040 preparation", "1040 review", "1041 preparation", "1065 review", "1120 preparation",
-    "w-2 processing", "1099 processing", "irs compliance review", "federal state tax preparation",
-    "individual corporate tax", "tax return qa", "tax software review", "multi-state tax filing",
-    "tax deadline compliance", "client tax advisory",
+    # Tax Forms (1–20)
+    "Form 1040", "Form 1040NR", "Form 1040SR", "Form 1041", "Form 1120",
+    "Form 1120S", "Form 1065", "Form 990", "Form 1099", "W-2",
+    "Schedule A", "Schedule B", "Schedule C", "Schedule D", "Schedule E",
+    "Schedule F", "Schedule K-1", "Schedule SE", "Form 2441", "Form 8863",
+    # IRS / Regulatory (21–35)
+    "IRS", "IRS Guidelines", "IRS Regulations", "Department of Revenue", "DOR",
+    "Federal Tax", "State Tax", "Tax Compliance", "Tax Law", "Tax Code",
+    "Tax Reform", "Tax Withholding", "Tax Liability", "Tax Deductions", "Tax Credits",
+    # Preparation Keywords (36–50)
+    "Tax Preparation", "Tax Return Preparation", "Tax Filing", "Tax Review", "Tax Reviewer",
+    "Tax Return Review", "Quality Review", "Tax Advisory", "Client Returns", "Tax Planning",
+    "Tax Research", "Tax Compliance Review", "Return Review", "Tax Processing", "Tax Engagement",
+    # Software (51–65)
+    "Lacerte", "ProSeries", "GoSystem", "ONESOURCE", "UltraTax",
+    "CCH Axcess", "ProSystem fx", "Drake", "ATX", "TaxWise",
+    "TaxAct", "TaxSlayer", "ProConnect", "CrossLink", "H&R Block Software",
+    # Entity Types (66–75)
+    "Individual Tax", "Corporate Tax", "Partnership Tax", "S-Corporation", "Fiduciary Tax",
+    "Non-Resident Tax", "Exempt Organization", "Trust Tax", "Estate Tax", "Self-Employed Tax",
+    # Income Types (76–85)
+    "W-2 Income", "1099 Income", "Rental Income", "Business Income", "Capital Gains",
+    "Dividend Income", "Interest Income", "Self-Employment Income", "Foreign Income", "Passive Income",
+    # Combination Keywords (86–100)
+    "1040 Preparation", "1040 Review", "1041 Preparation", "1065 Review", "1120 Preparation",
+    "W-2 Processing", "1099 Processing", "IRS Compliance Review", "Federal State Tax Preparation",
+    "Individual Corporate Tax", "Tax Return QA", "Tax Software Review", "Multi-State Tax Filing",
+    "Tax Deadline Compliance", "Client Tax Advisory",
 ]
 
 # India cities ONLY - metro + tier-2 cities
