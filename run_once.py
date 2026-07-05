@@ -63,10 +63,29 @@ def is_valid_us_tax_job(job):
 
 
 def is_us_tax_job(job):
-    title = job.get("title", "")
+    title = job.get("title", "").lower()
+    company = job.get("company", "").lower()
+
     if BLOCKLIST.search(title):
         return False
-    return True
+
+    keywords = [
+        "tax associate", "tax analyst", "tax consultant", "tax manager", "tax accountant",
+        "tax auditor", "tax preparer", "tax advisor", "tax specialist", "tax auditor",
+        "payroll specialist", "tax operations", "tax documentation", "tax reporting",
+        "tax compliance", "tax planning", "tax senior", "tax director", "tax officer",
+        "tax coordinator", "tax coordinator", "tax litigation", "tax risk", "tax process",
+        "tax technology", "indirect tax", "corporate tax", "international tax", "us tax",
+        "us taxation", "taxation manager", "global mobility", "transfer pricing",
+        "private client", "estates", "trusts", "wealth management", "family office",
+        "1040", "1120", "1065", "irs", "enrolled agent", "cpa", "gst"
+    ]
+
+    for keyword in keywords:
+        if keyword in title or keyword in company:
+            return True
+
+    return False
 
 
 def load_state():
