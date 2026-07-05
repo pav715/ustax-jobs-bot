@@ -2,8 +2,10 @@ name: US Tax Jobs Bot
 
 on:
   schedule:
-    # Hourly during IST active hours 8 AM - 10 PM (UTC 2:30 - 16:30). Silent at night.
-    - cron: "30 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 * * *"
+    # Hourly IST 8 AM - 8 PM (UTC 2:30-14:30, 12 runs/day = 360 min/month)
+    # To accommodate US Tax Software Testing till 11:58 PM (16 runs = 480 min/month)
+    # Total: 120 + 120 + 360 + 480 = 1,080 min/month ✅
+    - cron: "30 2,3,4,5,6,7,8,9,10,11,12,13,14 * * *"
   workflow_dispatch:
     inputs:
       seed_mode:
