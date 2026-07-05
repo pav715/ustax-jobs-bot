@@ -136,10 +136,10 @@ def is_us_tax_job(job):
     """DESCRIPTION-ONLY: Accept if description has 3+ keywords from the 100-keyword list."""
     desc = job.get("description", "").lower()
 
-    # TAX PREPARATION: 20 Filter Keywords - if ANY 1 found in description → POST
+    # TAX PREPARATION: 20 Filter Keywords - MUST INCLUDE TAX-SPECIFIC TERMS
     us_tax_keywords = [
-        "form 1040", "form 1041", "form 1120", "form 1065", "w-2", "1099", "schedule k-1", "irs", "dor", "federal tax",
-        "state tax", "tax preparation", "tax return", "tax filing", "tax review", "tax reviewer", "lacerte", "proseries", "ultratax", "tax compliance",
+        "form 1040", "form 1041", "form 1120", "form 1065", "w-2", "1099", "schedule k-1", "irs", "dor", "tax preparation",
+        "tax return", "tax filing", "tax review", "tax reviewer", "lacerte", "proseries", "ultratax", "tax compliance", "federal tax", "state tax",
     ]
 
     # Count keywords found in description
