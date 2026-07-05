@@ -133,7 +133,7 @@ def is_india_location(job):
 
 
 def is_us_tax_job(job):
-    """STRICT: Accept only if title matches one of the 100 role titles (from config.KEYWORDS)."""
+    """HYBRID: Accept if title matches 100 roles OR description has US Tax keywords/forms."""
     title = job.get("title", "").lower()
     company = job.get("company", "").lower()
     desc = job.get("description", "").lower()
@@ -153,9 +153,8 @@ def is_us_tax_job(job):
     if has_indian_tax:
         return False
 
-    # STRICT MATCHING: Title MUST contain one of the 100 keywords from config
+    # OPTION 1: Title matches one of 100 keywords
     target_keywords = [
-        # Tax Preparer (1-15)
         "us tax preparer", "tax preparer", "senior tax preparer",
         "individual tax preparer", "tax return preparer",
         "tax preparation specialist", "tax filing specialist",
@@ -163,7 +162,6 @@ def is_us_tax_job(job):
         "federal tax preparer", "state tax preparer",
         "tax preparer associate", "tax preparer consultant",
         "tax filer", "tax filing analyst",
-        # Tax Analyst (16-30)
         "tax analyst", "us tax analyst", "senior tax analyst",
         "tax compliance analyst", "us tax compliance analyst",
         "federal tax analyst", "state tax analyst",
@@ -171,25 +169,21 @@ def is_us_tax_job(job):
         "tax data analyst", "tax operations analyst",
         "tax process analyst", "tax reporting analyst",
         "tax planning analyst", "tax advisory analyst",
-        # Tax Reviewer (31-40)
         "tax reviewer", "senior tax reviewer", "tax review analyst",
         "tax quality reviewer", "tax review specialist",
         "tax return reviewer", "tax compliance reviewer",
         "tax audit reviewer", "tax technical reviewer",
         "tax senior reviewer",
-        # Tax Associate (41-50)
         "tax associate", "senior tax associate", "tax associate analyst",
         "us tax associate", "tax staff associate",
         "tax associate consultant", "tax associate specialist",
         "junior tax associate", "tax process associate",
         "tax compliance associate",
-        # Tax Consultant (51-60)
         "tax consultant", "us tax consultant", "senior tax consultant",
         "tax advisory consultant", "tax compliance consultant",
         "tax technology consultant", "tax process consultant",
         "tax planning consultant", "tax transformation consultant",
         "tax digital consultant",
-        # Tax Senior / Manager (61-75)
         "tax senior", "us tax senior", "senior tax specialist",
         "tax manager", "us tax manager", "senior tax manager",
         "tax compliance manager", "tax operations manager",
@@ -197,13 +191,11 @@ def is_us_tax_job(job):
         "tax supervisor", "tax team lead",
         "tax practice manager", "tax engagement manager",
         "tax process manager",
-        # Tax Specialist (76-85)
         "tax specialist", "us tax specialist", "senior tax specialist",
         "tax compliance specialist", "tax filing specialist",
         "tax regulatory specialist", "tax operations specialist",
         "tax technology specialist", "tax research specialist",
         "tax advisory specialist",
-        # US Taxation (86-100)
         "us taxation analyst", "us taxation associate",
         "us taxation consultant", "us taxation specialist",
         "us taxation manager", "us taxation senior",
@@ -214,13 +206,36 @@ def is_us_tax_job(job):
         "us tax operations analyst"
     ]
 
-    # Check if title contains any of the 100 keywords
     has_matching_title = any(kw in title for kw in target_keywords)
+    has_catchall_title = "us tax" in title or "us taxation" in title
 
-    # Also accept if has "US Tax" or "US Taxation" catchall
-    has_catchall = "us tax" in title or "us taxation" in title
+    # OPTION 2: Description has SPECIFIC tax forms or tax-specific keywords (not generic)
+    form_numbers = ["1040", "1041", "1120", "1120s", "1065", "w-2", "1099", "schedule c", "schedule e", "schedule k-1", "1040nr"]
 
-    return has_matching_title or has_catchall
+    # 50 US Tax Preparation Keywords
+    us_tax_desc_keywords = [
+        # Core Tax Keywords (1-15)
+        "form 1040", "form 1041", "form 1120", "form 1120s", "form 1065",
+        "w-2", "1099", "schedule c", "schedule e", "schedule k-1",
+        "federal tax return", "state tax return", "irs", "department of revenue", "tax withholding",
+        # Software Keywords (16-25)
+        "lacerte", "proseries", "gosystem", "onesource", "ultratax",
+        "cch axcess", "prosystem fx", "drake", "atx", "taxwise",
+        # Process Keywords (26-35)
+        "tax preparation", "tax filing", "tax compliance", "tax returns", "tax review",
+        "tax advisory", "client tax returns", "electronic filing", "paper filing", "tax deductions",
+        # Domain Keywords (36-50)
+        "individual tax", "corporate tax", "partnership tax", "s-corporation tax", "fiduciary tax",
+        "non-resident tax", "standard deduction", "itemized deduction", "tax credits", "amt",
+        "fica", "fbar", "fatca", "tax liability", "tax preparer"
+    ]
+
+    has_form_in_desc = any(fn in desc for fn in form_numbers)
+    has_us_tax_keyword_in_desc = any(kw in desc for kw in us_tax_desc_keywords)
+
+    # HYBRID: Accept if title matches OR (form OR tax keyword in description)
+    # This catches jobs that don't have exact title but clearly mention tax roles/forms
+    return has_matching_title or has_catchall_title or has_form_in_desc or has_us_tax_keyword_in_desc
 
 
 def load_state():
