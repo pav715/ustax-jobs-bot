@@ -136,27 +136,24 @@ def is_us_tax_job(job):
     """DESCRIPTION-ONLY: Accept if description has 3+ keywords from the 100-keyword list."""
     desc = job.get("description", "").lower()
 
-    # 100 US Tax Filter Keywords - if ANY 1 found in description → POST
+    # 100 EXACT FILTER KEYWORDS - if ANY 1 found in description → POST
     us_tax_keywords = [
-        # Tax Forms (1-20)
-        "form 1040", "form 1041", "form 1120", "form 1120s", "form 1065", "form 990", "1040nr", "1040sr",
-        "schedule a", "schedule b", "schedule c", "schedule d", "schedule e", "schedule f", "schedule k-1", "w-2", "1099", "w-4", "1098", "1095",
-        # IRS / Regulatory (21-30)
-        "irs", "dor", "department of revenue", "federal tax", "state tax", "tax law", "tax code", "irs regulations", "irs guidelines", "irs compliance",
-        # Preparation / Review (31-40)
-        "tax preparation", "tax return", "tax filing", "tax review", "tax reviewer", "tax preparer", "return preparation", "tax processing", "tax advisory", "client returns",
-        # Software (41-55)
-        "lacerte", "proseries", "gosystem", "onesource", "ultratax", "cch axcess", "prosystem fx", "drake", "atx", "taxwise", "taxact", "taxslayer", "proconnect", "crosslink", "h&r block software",
-        # Entity Types (56-65)
-        "individual tax", "corporate tax", "partnership tax", "s-corporation", "fiduciary tax", "non-resident tax", "trust tax", "estate tax", "exempt organization", "self-employed",
-        # Income Types (66-75)
-        "w-2 income", "1099 income", "rental income", "capital gains", "business income", "dividend income", "interest income", "foreign income", "passive income", "self-employment income",
-        # Compliance (76-85)
-        "tax compliance", "tax regulations", "multi-state filing", "federal compliance", "state compliance", "tax deadline", "tax withholding", "tax liability", "tax deductions", "tax credits",
-        # Process (86-95)
-        "tax engagement", "tax planning", "tax research", "tax analysis", "tax consulting", "quality review", "tax audit", "tax documentation", "client interaction", "tax strategy",
-        # Tools (96-100)
-        "excel", "ms office", "quickbooks", "lacerte software", "tax software",
+        # Tax Technology / Software (1-10) - PRIORITY
+        "tax technology", "tax software", "tax platform", "tax engine", "tax system", "tax application", "tax tool", "tax automation", "tax digital", "tax transformation",
+        # E-File / ATS / Schema (11-25) - PRIORITY
+        "ats", "e-file", "efile", "xml schema", "xsd", "schema validation", "mef", "modernized e-file", "e-file approval", "ats submission", "print approval", "e-file compliance", "dor approval", "state e-file", "e-file diagnostics",
+        # Tax Software Names (26-45)
+        "lacerte", "proseries", "gosystem", "onesource", "ultratax", "cch axcess", "prosystem fx", "drake", "atx", "taxwise", "taxact", "taxslayer", "proconnect", "crosslink", "vertex", "avalara", "sovos", "corptax", "bloomberg tax", "ryan tax",
+        # QA / Testing (46-60)
+        "tax qa", "tax software qa", "tax software testing", "tax compliance qa", "regression testing", "functional testing", "uat", "test cases", "bug tracking", "manual testing", "software validation", "pre-production testing", "post-production testing", "defect management", "compliance testing",
+        # Tax Preparation (61-75)
+        "tax preparation", "tax return", "tax filing", "tax review", "form 1040", "form 1041", "form 1120", "form 1065", "w-2", "1099", "schedule k-1", "irs", "dor", "federal tax", "state tax",
+        # Tools / Tech (76-85)
+        "java", "xml", "xsd", "github", "jira", "visual studio", "lasermap", "2d barcode", "delphi", "xmlspy",
+        # AI / Automation (86-95)
+        "ai tool development", "mcp", "brms", "ai automation", "tax ai", "tax automation", "workflow automation", "claude ai", "tax innovation", "rpa tax",
+        # Compliance / Regulatory (96-100)
+        "tax compliance", "regulatory compliance", "tax form development", "filing product", "government liaison",
     ]
 
     # Count keywords found in description
