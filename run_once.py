@@ -133,25 +133,8 @@ def is_india_location(job):
 
 
 def is_us_tax_job(job):
-    """DESCRIPTION-ONLY: Accept only if description has core tax identifiers + keywords."""
-    title = job.get("title", "").lower()
-    company = job.get("company", "").lower()
+    """DESCRIPTION-ONLY: Accept if description has 3+ keywords from the 100-keyword list."""
     desc = job.get("description", "").lower()
-    full = f"{title} {company} {desc}"
-
-    # Reject if blocklist matches (still check title for obvious non-tax jobs)
-    if BLOCKLIST.search(title):
-        return False
-
-    # Reject if has Indian tax keywords
-    indian_tax_keywords = [
-        "itr", "gst", "vat", "income tax", "tds", "tcs",
-        "indian tax", "india tax", "service tax", "excise duty",
-        "transfer pricing", "indirect tax"
-    ]
-    has_indian_tax = any(kw in full for kw in indian_tax_keywords)
-    if has_indian_tax:
-        return False
 
     # 100 US Tax Preparation Keywords
     us_tax_keywords = [
