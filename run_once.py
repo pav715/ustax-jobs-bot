@@ -133,10 +133,16 @@ def is_india_location(job):
 
 
 def is_us_tax_job(job):
-    """DESCRIPTION-ONLY: Accept if description has 3+ keywords from the 100-keyword list."""
+    """Accept if: 2+ keywords found AND location is India (not remote non-India)."""
     desc = job.get("description", "").lower()
+    location = job.get("location", "").lower()
 
-    # TAX PREPARATION: 20 Filter Keywords - MUST INCLUDE TAX-SPECIFIC TERMS
+    # Reject non-India remote jobs (US, Europe, etc.)
+    non_india_keywords = ["usa", "united states", "us ", "uk ", "europe", "canada", "australia", "singapore", "sverige", "japan", "dubai"]
+    if "remote" in location and any(kw in location for kw in non_india_keywords):
+        return False
+
+    # TAX PREPARATION: 20 Filter Keywords - REQUIRE MINIMUM 2
     us_tax_keywords = [
         "form 1040", "form 1041", "form 1120", "form 1065", "w-2", "1099", "schedule k-1", "irs", "dor", "tax preparation",
         "tax return", "tax filing", "tax review", "tax reviewer", "lacerte", "proseries", "ultratax", "tax compliance", "federal tax", "state tax",
