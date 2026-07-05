@@ -98,25 +98,21 @@ def is_us_tax_job(job):
     us_specific_keywords = [
         "1040", "1041", "1120", "1065", "1099", "w-2",
         "enrolled agent", "ea", "cpa", "irs", "internal revenue",
-        "us tax", "us taxation", "united states tax",
-        "big 4", "cpa firm", "tax firm"
+        "us tax", "us taxation", "united states tax"
     ]
 
-    common_tax_keywords = [
-        "tax accountant", "tax analyst", "tax associate", "tax assistant",
-        "tax manager", "tax director", "tax supervisor", "tax auditor",
-        "tax preparer", "tax advisor", "tax consultant", "tax specialist",
-        "tax compliance", "tax planning", "tax operations", "tax reporting",
-        "compliance specialist", "audit", "accounting"
+    indian_tax_keywords = [
+        "gst", "goods and services tax", "income tax", "it return",
+        "indian tax", "india tax", "ato", "inr", "rupee"
     ]
 
     has_us_specific = any(kw in full for kw in us_specific_keywords)
-    has_common_tax = any(kw in title for kw in common_tax_keywords)
+    has_indian_tax = any(kw in full for kw in indian_tax_keywords)
+
+    if has_indian_tax:
+        return False
 
     if has_us_specific:
-        return True
-
-    if has_common_tax and "gst" not in full and "goods and services" not in full:
         return True
 
     return False
