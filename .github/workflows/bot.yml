@@ -3,7 +3,7 @@ name: US Tax Jobs Bot
 on:
   schedule:
     # Hourly during IST active hours 8 AM - 10 PM (UTC 2:30 - 16:30). Silent at night.
-    - cron: "30 2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 * * *"
+    - cron: "0 * * * *"
   workflow_dispatch:
     inputs:
       seed_mode:
