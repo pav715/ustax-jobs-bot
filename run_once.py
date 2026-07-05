@@ -95,10 +95,16 @@ def is_us_tax_job(job):
     if BLOCKLIST.search(title):
         return False
 
+    form_numbers = ["1040", "1041", "1120", "1065", "1099", "w-2"]
     us_specific_keywords = [
-        "1040", "1041", "1120", "1065", "1099", "w-2",
         "enrolled agent", "ea", "cpa", "irs", "internal revenue",
         "us tax", "us taxation", "united states tax"
+    ]
+
+    common_tax_roles = [
+        "tax preparer", "tax analyst", "tax accountant", "tax associate",
+        "tax manager", "tax director", "tax consultant", "tax specialist",
+        "tax compliance", "tax auditor"
     ]
 
     indian_tax_keywords = [
@@ -106,13 +112,21 @@ def is_us_tax_job(job):
         "indian tax", "india tax", "ato", "inr", "rupee"
     ]
 
-    has_us_specific = any(kw in full for kw in us_specific_keywords)
+    has_form_number = any(fn in full for fn in form_numbers)
+    has_form_in_desc = any(fn in desc for fn in form_numbers)
+    has_us_keyword = any(kw in full for kw in us_specific_keywords)
+    has_common_role = any(role in title for role in common_tax_roles)
     has_indian_tax = any(kw in full for kw in indian_tax_keywords)
 
     if has_indian_tax:
         return False
 
-    if has_us_specific:
+    # Accept if has form numbers OR US-specific keywords in full text
+    if has_form_number or has_us_keyword:
+        return True
+
+    # Accept if common tax role title AND form numbers MUST be in description
+    if has_common_role and has_form_in_desc:
         return True
 
     return False
