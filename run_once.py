@@ -340,20 +340,6 @@ def main():
     print(f"DEBUG: India jobs: {len(india_jobs)}")
 
     us_tax_jobs = [j for j in india_jobs if is_us_tax_job(j)]
-
-    # TEST: Add fake job for testing
-    fake_job = {
-        "title": "ðŸ§ª TEST: US Tax Analyst",
-        "company": "Test Company",
-        "location": "Hyderabad, India",
-        "url": "https://test.com/test-job",
-        "source": "TEST",
-        "posted": datetime.utcnow().isoformat(),
-        "fetched_at": datetime.utcnow().isoformat(),
-        "description": "This is a test job to verify bot is working correctly!"
-    }
-    us_tax_jobs.append(fake_job)
-
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(india_jobs)} India jobs.")
     print(f"DEBUG: US Tax jobs: {len(us_tax_jobs)}")
 
