@@ -5,7 +5,8 @@ CHAT_ID   = os.environ.get("CHAT_ID", "-1003570586532")  # Already correct
 
 # Search keyword - actual filtering happens by description (3+ matches required)
 KEYWORDS = [
-    "tax",
+    "US tax",
+    "US taxation",
 ]
     "Tax Digital Consultant",
 
