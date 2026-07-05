@@ -70,15 +70,36 @@ def is_us_tax_job(job):
         return False
 
     keywords = [
+        # Core Tax Roles
         "tax associate", "tax analyst", "tax consultant", "tax manager", "tax accountant",
-        "tax auditor", "tax preparer", "tax advisor", "tax specialist", "tax auditor",
-        "payroll specialist", "tax operations", "tax documentation", "tax reporting",
-        "tax compliance", "tax planning", "tax senior", "tax director", "tax officer",
-        "tax coordinator", "tax coordinator", "tax litigation", "tax risk", "tax process",
-        "tax technology", "indirect tax", "corporate tax", "international tax", "us tax",
-        "us taxation", "taxation manager", "global mobility", "transfer pricing",
+        "tax auditor", "tax preparer", "tax advisor", "tax specialist", "tax senior",
+        "tax director", "tax officer", "tax coordinator", "taxation manager",
+
+        # Specific Tax Functions
+        "payroll specialist", "payroll tax", "tax operations", "tax documentation",
+        "tax reporting", "tax compliance", "tax planning", "tax risk", "tax process",
+        "tax technology", "tax litigation", "tax research",
+
+        # Tax Types
+        "corporate tax", "international tax", "indirect tax", "us tax", "us taxation",
+        "direct tax", "sales tax", "estate tax", "gift tax", "excise tax",
+        "global mobility", "transfer pricing", "m&a tax", "cross-border",
+
+        # Specialized Areas
         "private client", "estates", "trusts", "wealth management", "family office",
-        "1040", "1120", "1065", "irs", "enrolled agent", "cpa", "gst"
+        "expatriate tax", "expat tax", "high net worth", "hnw",
+
+        # Tax Forms & IRS
+        "1040", "1041", "1120", "1065", "1099", "w-2", "irs", "irb",
+        "enrolled agent", "cpa", "ca", "ea", "aicpa",
+
+        # Compliance & Reporting
+        "compliance", "filing", "e-file", "audit", "reporting", "documentation",
+        "advisor", "adviser", "advisory", "consulting", "consulting", "big 4",
+
+        # Additional Keywords
+        "gst", "vat", "financial", "accounting", "finance", "ato",
+        "atp", "tax audit", "tax return", "partnership", "s-corp"
     ]
 
     for keyword in keywords:
