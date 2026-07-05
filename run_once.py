@@ -20,51 +20,11 @@ STATE_FILE = "bot_state.json"
 
 US_TAX_TERMS = re.compile(
     r"("
-    r"\btax\b.*\b(analyst|consultant|preparer|associate|advisor|manager|accountant|specialist|reviewer|intern|senior)\b|"
-    r"\b(analyst|consultant|preparer|associate|advisor|manager|accountant|specialist|reviewer|intern|senior)\b.*\btax\b|"
-    r"us\s*tax(ation)?|u\.s\.?\s*tax|united\s*states?\s*tax|"
-    r"us\s*income\s*tax|us\s*federal\s*tax|"
-    r"1040|1041|1120|1065|990|5500|1099|w-?2|"
-    r"form\s*10(40|41|20|65|99)|"
-    r"irs|internal\s*revenue|federal\s*tax|state\s*tax|"
-    r"individual\s*tax(ation)?|corporate\s*tax(ation)?|"
-    r"fiduciary\s*tax(ation)?|partnership\s*tax(ation)?|"
-    r"tax\s*prep(arer|aration)?|tax\s*e.?fil|"
-    r"tax\s*compliance|tax\s*consultant|"
-    r"tax\s*software|tax\s*sme|tax\s*subject|"
-    r"international\s*tax(ation)?|expat(riate)?\s*tax|"
-    r"enrolled\s*agent|cpa\s*(us\s*)?tax|"
-    r"lacerte|proseries|proconnect|ultratax|drake|"
-    r"tax\s*returns?|"
-    r"tax\s*operations?\s*analyst|tax\s*documentation|"
-    r"global\s*compliance|gcr\s*consultant|"
-    r"indirect\s*tax|sales\s*tax|vat\s*tax|excise\s*tax|"
-    r"m&a\s*tax|merger\s*acquisition\s*tax|"
-    r"transfer\s*pricing|"
-    r"tax\s*technology|tax\s*automation|"
-    r"direct\s*tax|property\s*casualty\s*tax|"
-    r"us\s*taxation|us\s*entity\s*tax|"
-    r"cross.?border\s*tax|"
-    r"tax\s*specialist|tax\s*compliance\s*analyst|"
-    r"corporate\s*tax|personal\s*tax|payroll\s*specialist|"
-    r"tax\s*supervisor|tax\s*audit\s*manager|lead\s*tax|"
-    r"tax\s*director|director\s*of\s*tax|"
-    r"vice\s*president.*tax|vp\s*tax|"
-    r"salt\s*tax|state\s*local\s*tax|"
-    r"irc\s*provisions|internal\s*revenue\s*code|"
-    r"tax\s*planning|tax.?loss\s*harvesting|retirement\s*planning|"
-    r"estate\s*gift\s*tax|trust\s*taxation|"
-    r"payroll\s*tax|fica\s*tax|unemployment\s*tax|"
-    r"multi.?state\s*tax|nexus\s*tax|"
-    r"tax\s*provision|deferred\s*tax|asc\s*740|"
-    r"audit\s*support|workpaper|"
-    r"gaap|ifrs|accounting\s*standard|"
-    r"turbotax|taxtact|cch\s*axcess|onesource|"
-    r"quickbooks|sap\s*tax|oracle\s*netsuite|"
-    r"tableau|power\s*bi|"
-    r"rpa|robotic\s*process\s*automation|"
-    r"tax\s*research|tax\s*statutes|tax\s*guidance|"
-    r"strategic\s*advisory"
+    r"1040|1041|1065|1120|"
+    r"us\s*tax\s*preparer|us\s*tax\s*analyst|"
+    r"enrolled\s*agent|"
+    r"cpa\s*tax|"
+    r"irs"
     r")",
     re.IGNORECASE,
 )
@@ -83,36 +43,23 @@ BLOCKLIST = re.compile(
 )
 
 
-USA_LOCATION = re.compile(
-    r"\b(usa|united\s*states?|u\.s\.a?\.?|"
-    r"new\s*york|california|texas|florida|illinois|washington\s*dc|"
-    r"massachusetts|new\s*jersey|georgia|ohio|virginia|pennsylvania|"
-    r"north\s*carolina|michigan|arizona|colorado|"
-    r"\bNY\b|\bCA\b|\bTX\b|\bFL\b|\bIL\b|\bNJ\b|\bGA\b|\bMA\b|"
-    r"\bOH\b|\bVA\b|\bPA\b|\bNC\b|\bMI\b|\bAZ\b|\bCO\b|\bDC\b)\b",
-    re.IGNORECASE,
-)
-
-INDIA_LOCATION = re.compile(
-    r"india|hyderabad|bangalore|bengaluru|chennai|mumbai|pune|"
-    r"delhi|gurugram|gurgaon|noida|kerala|tamil|kolkata|"
-    r"ahmedabad|nagpur|indore|jaipur|bhopal|lucknow|chandigarh|"
-    r"bhubaneswar|kochi|coimbatore|visakhapatnam|thiruvananthapuram|"
-    r"remote|work\s*from\s*home",
+US_STATES = re.compile(
+    r"\b(New York|California|Texas|Florida|Illinois|Washington DC|"
+    r"Massachusetts|New Jersey|Georgia|Ohio|Virginia|Pennsylvania|"
+    r"North Carolina|Michigan|Arizona|Colorado|"
+    r"NY|CA|TX|FL|IL|NJ|GA|MA|OH|VA|PA|NC|MI|AZ|CO|DC|"
+    r"Remote|WFH|Work from Home)\b",
     re.IGNORECASE,
 )
 
 
-def is_india_job(job):
-    """Return True only if job is in India — reject USA locations."""
-    loc = job.get("location", "")
-    if USA_LOCATION.search(loc):
-        return False
-    if INDIA_LOCATION.search(loc):
-        return True
-    if not loc or loc.strip() == "":
-        return True
-    return False
+def is_valid_us_tax_job(job):
+    """Accept only if job mentions US state or Remote explicitly."""
+    title = job.get("title", "")
+    location = job.get("location", "")
+    company = job.get("company", "")
+    full = f"{title} {location} {company}"
+    return bool(US_STATES.search(full))
 
 
 def is_us_tax_job(job):
@@ -362,29 +309,9 @@ def main():
     print(f"DEBUG: Total jobs scraped: {len(jobs)}")
     log(f"Total jobs scraped: {len(jobs)}")
 
-    india_jobs = [j for j in jobs if is_india_job(j)]
-    log(f"India location: {len(india_jobs)} out of {len(jobs)} total.")
-    print(f"DEBUG: India jobs: {len(india_jobs)}")
-
-    us_tax_jobs = [j for j in india_jobs if is_us_tax_job(j)]
-    log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(india_jobs)} India jobs.")
+    us_tax_jobs = [j for j in jobs if is_us_tax_job(j)]
+    log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(jobs)} total jobs.")
     print(f"DEBUG: US Tax jobs: {len(us_tax_jobs)}")
-
-    if len(india_jobs) > 0 and len(us_tax_jobs) == 0:
-        log("DEBUG: Checking first India job for filter match:")
-        first_job = india_jobs[0]
-        title = first_job.get('title', '')
-        company = first_job.get('company', '')
-        desc = first_job.get('description', '')
-        location = first_job.get('location', '')
-        full_text = f"{title} {company} {desc}"
-        tax_match = bool(US_TAX_TERMS.search(full_text))
-        block_match = bool(BLOCKLIST.search(title))
-        log(f"  Title: {title}")
-        log(f"  Company: {company}")
-        log(f"  Location: {location}")
-        log(f"  Matches US_TAX_TERMS: {tax_match}")
-        log(f"  Matches BLOCKLIST: {block_match}")
 
     new_jobs = [j for j in us_tax_jobs if _dedup_key(j) not in seen]
     new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
