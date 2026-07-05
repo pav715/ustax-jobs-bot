@@ -149,7 +149,14 @@ def is_us_tax_job(job):
     ]
 
     # Count keywords found in description
-    keyword_count = sum(1 for kw in us_tax_keywords if kw in desc)
+    matched_keywords = [kw for kw in us_tax_keywords if kw in desc]
+    keyword_count = len(matched_keywords)
+
+    # Debug output for accepted jobs
+    if keyword_count >= 2:
+        title = job.get("title", "")
+        company = job.get("company", "")
+        print(f"DEBUG: '{title}' @ {company} matched {keyword_count} keywords: {matched_keywords}")
 
     # Accept only if 2+ keywords found (prevents false positives)
     return keyword_count >= 2
