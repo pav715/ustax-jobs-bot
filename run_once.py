@@ -233,9 +233,21 @@ def is_us_tax_job(job):
     has_form_in_desc = any(fn in desc for fn in form_numbers)
     has_us_tax_keyword_in_desc = any(kw in desc for kw in us_tax_desc_keywords)
 
-    # HYBRID: Accept if title matches OR (form OR tax keyword in description)
-    # This catches jobs that don't have exact title but clearly mention tax roles/forms
-    return has_matching_title or has_catchall_title or has_form_in_desc or has_us_tax_keyword_in_desc
+    # FINAL GATE: Description MUST have at least one of these core identifiers
+    core_identifiers = ["us tax", "us taxation", "irs", "form 1040", "dor", "department of revenue", "tax return", "federal tax"]
+    has_core_identifier = any(identifier in desc for identifier in core_identifiers)
+
+    # HYBRID + GATING:
+    # 1. Accept if title matches (already curated 100 titles)
+    # 2. OR accept if has core identifier + (form OR tax keyword in description)
+    # This prevents false positives from generic job descriptions
+    if has_matching_title or has_catchall_title:
+        return True
+
+    if has_core_identifier and (has_form_in_desc or has_us_tax_keyword_in_desc):
+        return True
+
+    return False
 
 
 def load_state():
