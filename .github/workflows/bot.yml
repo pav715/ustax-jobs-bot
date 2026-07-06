@@ -1,7 +1,21 @@
 name: US Tax Jobs Bot
 
 on:
-  # Schedule handled by scheduler.yml (lightweight trigger — more reliable)
+  schedule:
+    # IST 8:00 AM - 8:00 PM exactly (UTC 2:30 = IST 8:00 AM)
+    - cron: "30 2 * * *"
+    - cron: "30 3 * * *"
+    - cron: "30 4 * * *"
+    - cron: "30 5 * * *"
+    - cron: "30 6 * * *"
+    - cron: "30 7 * * *"
+    - cron: "30 8 * * *"
+    - cron: "30 9 * * *"
+    - cron: "30 10 * * *"
+    - cron: "30 11 * * *"
+    - cron: "30 12 * * *"
+    - cron: "30 13 * * *"
+    - cron: "30 14 * * *"
   workflow_dispatch:
     inputs:
       seed_mode:
