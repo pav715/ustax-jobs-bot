@@ -1,9 +1,7 @@
 name: US Tax Jobs Bot
 
 on:
-  schedule:
-    # IST 8:00 AM - 8:00 PM exactly (UTC 2:30-14:30 at :30 = IST :00 each hour)
-    - cron: "30 2,3,4,5,6,7,8,9,10,11,12,13,14 * * *"
+  # Schedule handled by scheduler.yml (lightweight trigger — more reliable)
   workflow_dispatch:
     inputs:
       seed_mode:
@@ -12,7 +10,7 @@ on:
         default: "false"
 
 concurrency:
-  group: bot-run
+  group: bot-run-${{ github.workflow }}
   cancel-in-progress: false
   queue: max
 
