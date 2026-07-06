@@ -1,9 +1,7 @@
 name: US Tax Jobs Bot (Auto)
 
-# AUTO ONLY — separate from manual, no concurrency blocking
+# Triggered by cron-tick.yml or manual dispatch — NO schedule here, NO concurrency
 on:
-  schedule:
-    - cron: "30 2,3,4,5,6,7,8,9,10,11,12,13,14 * * *"
   workflow_dispatch:
 
 permissions:
