@@ -1,0 +1,87 @@
+name: Setup External Cron
+
+# ONE-TIME online setup (no laptop scripts):
+# 1. cron-job.org free signup → Settings → API key
+# 2. GitHub repo Settings → Secrets → CRONJOB_API_KEY = paste key
+# 3. Actions → this workflow → Run workflow
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  create-cron-job:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate secrets
+        env:
+          CRONJOB_API_KEY: ${{ secrets.CRONJOB_API_KEY }}
+          CRON_TRIGGER_PAT: ${{ secrets.CRON_TRIGGER_PAT }}
+        run: |
+          if [ -z "$CRONJOB_API_KEY" ]; then
+            echo "Missing secret CRONJOB_API_KEY"
+            echo "Get free key: https://cron-job.org/en/members/settings/"
+            exit 1
+          fi
+          if [ -z "$CRON_TRIGGER_PAT" ]; then
+            echo "Missing secret CRON_TRIGGER_PAT"
+            exit 1
+          fi
+          echo "Secrets OK"
+
+      - name: Create hourly cron-job.org job
+        env:
+          CRONJOB_API_KEY: ${{ secrets.CRONJOB_API_KEY }}
+          CRON_TRIGGER_PAT: ${{ secrets.CRON_TRIGGER_PAT }}
+        run: |
+          payload=$(cat <<EOF
+          {
+            "job": {
+              "title": "US Tax Bots Hourly 8AM-11PM IST",
+              "url": "https://api.github.com/repos/pav715/ustax-jobs-bot/actions/workflows/hourly-orchestrator.yml/dispatches",
+              "enabled": true,
+              "saveResponses": true,
+              "requestMethod": 1,
+              "extendedData": {
+                "headers": {
+                  "Authorization": "Bearer ${CRON_TRIGGER_PAT}",
+                  "Accept": "application/vnd.github+json",
+                  "Content-Type": "application/json"
+                },
+                "body": "{\"ref\":\"main\"}"
+              },
+              "schedule": {
+                "timezone": "Asia/Kolkata",
+                "expiresAt": 0,
+                "hours": [8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],
+                "minutes": [0],
+                "mdays": [-1],
+                "months": [-1],
+                "wdays": [-1]
+              }
+            }
+          }
+          EOF
+          )
+          code=$(curl -s -o /tmp/cron-out.json -w "%{http_code}" -X PUT \
+            -H "Authorization: Bearer ${CRONJOB_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d "$payload" \
+            "https://api.cron-job.org/jobs")
+          echo "cron-job.org HTTP ${code}"
+          cat /tmp/cron-out.json
+          [ "${code}" = "200" ] || [ "${code}" = "201" ] || exit 1
+
+      - name: Test orchestrator now
+        env:
+          CRON_TRIGGER_PAT: ${{ secrets.CRON_TRIGGER_PAT }}
+        run: |
+          code=$(curl -s -o /tmp/gh-out.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${CRON_TRIGGER_PAT}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pav715/ustax-jobs-bot/actions/workflows/hourly-orchestrator.yml/dispatches" \
+            -d '{"ref":"main"}')
+          echo "Orchestrator test HTTP ${code}"
+          [ "${code}" = "204" ] || exit 1
