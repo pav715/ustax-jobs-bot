@@ -34,9 +34,10 @@ jobs:
             "https://api.github.com/repos/pav715/ustax-jobs-bot/actions/workflows/bot-auto.yml/dispatches" \
             -d '{"ref":"main"}')
           echo "Tax HTTP ${code}"
+          cat /tmp/tax.txt || true
           [ "${code}" = "204" ] || exit 1
 
-      - name: Dispatch Testing bot
+      - name: Dispatch Testing bot (repository_dispatch)
         if: steps.gate.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ secrets.DISPATCH_TESTING_PAT }}
@@ -44,12 +45,13 @@ jobs:
           code=$(curl -s -o /tmp/test.txt -w "%{http_code}" -X POST \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/jowaxa2041/ustax-software-testing-bot/actions/workflows/bot-auto.yml/dispatches" \
-            -d '{"ref":"main"}')
+            "https://api.github.com/repos/jowaxa2041/ustax-software-testing-bot/dispatches" \
+            -d '{"event_type":"hourly-run"}')
           echo "Testing HTTP ${code}"
+          cat /tmp/test.txt || true
           [ "${code}" = "204" ] || exit 1
 
-      - name: Dispatch Mortgage bot
+      - name: Dispatch Mortgage bot (repository_dispatch)
         if: steps.gate.outputs.run == 'true'
         env:
           GH_TOKEN: ${{ secrets.DISPATCH_MORTGAGE_PAT }}
@@ -57,7 +59,8 @@ jobs:
           code=$(curl -s -o /tmp/mtg.txt -w "%{http_code}" -X POST \
             -H "Authorization: Bearer ${GH_TOKEN}" \
             -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/niwilis317/ustax-mortgage-telegram-bot/actions/workflows/bot-auto.yml/dispatches" \
-            -d '{"ref":"main"}')
+            "https://api.github.com/repos/niwilis317/ustax-mortgage-telegram-bot/dispatches" \
+            -d '{"event_type":"hourly-run"}')
           echo "Mortgage HTTP ${code}"
+          cat /tmp/mtg.txt || true
           [ "${code}" = "204" ] || exit 1
