@@ -3,13 +3,23 @@ import os
 BOT_TOKEN = os.environ.get("BOT_TOKEN", "")
 CHAT_ID   = os.environ.get("CHAT_ID", "")
 
-# TAX PREPARATION: 5 keywords for Phase 1
+# LinkedIn search keywords — broad US Tax coverage
 KEYWORDS = [
     "US Tax",
     "US Taxation",
+    "US Tax Analyst",
+    "US Tax Associate",
+    "US Tax Consultant",
     "Tax Preparation",
     "Tax Compliance",
     "Tax Reviewer",
+    "Federal Tax",
+    "International Tax",
+    "Corporate Tax US",
+    "Enrolled Agent",
+    "Tax Return Preparer",
+    "CPA Tax",
+    "US Tax Manager",
 ]
 
 # 12 CITIES - South First

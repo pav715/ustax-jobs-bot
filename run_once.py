@@ -19,9 +19,18 @@ STATS_FILE = "stats.json"
 STATE_FILE = "bot_state.json"
 
 US_TAX_KEYWORDS = [
-    "form 1040", "form 1041", "form 1120", "form 1065", "w-2", "1099", "schedule k-1",
-    "irs", "dor", "tax preparation", "tax return", "tax filing", "tax review", "tax reviewer",
-    "lacerte", "proseries", "ultratax", "tax compliance", "federal tax", "state tax",
+    "us tax", "us taxation", "u.s. tax", "federal tax", "international tax",
+    "form 1040", "form 1041", "form 1120", "form 1065", "form 990", "form 5500",
+    "w-2", "1099", "schedule k-1", "schedule c", "schedule e",
+    "irs", "dor", "tax preparation", "tax preparer", "tax return", "tax filing",
+    "tax review", "tax reviewer", "tax compliance", "tax analyst", "tax associate",
+    "tax consultant", "tax manager", "tax specialist", "tax advisor",
+    "lacerte", "proseries", "ultratax", "drake tax", "cch axcess", "atx",
+    "intuit", "turbotax", "h&r block", "enrolled agent", "cpa",
+    "state tax", "multi-state", "state and local", "salt",
+    "partnership tax", "corporate tax", "individual tax", "s corp", "c corp",
+    "estate tax", "gift tax", "trust tax", "fiduciary",
+    "tax provision", "asc 740", "transfer pricing us",
 ]
 
 INDIA_LOCATION_KEYWORDS = [
@@ -66,9 +75,18 @@ BLOCKLIST = re.compile(
 )
 
 # STRICT: Reject all Indian tax roles - no US Tax jobs should have these keywords
-# Title must contain US Tax (e.g. "US Tax Analyst", "Senior US Tax Associate")
+# Title match — US Tax roles (primary accept rule)
 US_TAX_TITLE = re.compile(
-    r"\b(u\.?\s*s\.?\s*tax(?:ation)?|us\s*tax(?:ation)?)\b",
+    r"\b("
+    r"u\.?\s*s\.?\s*tax(?:ation)?|us\s*tax(?:ation)?|"
+    r"federal\s*tax|international\s*tax|cross[\s-]*border\s*tax|"
+    r"us\s*corporate\s*tax|us\s*individual\s*tax|"
+    r"enrolled\s*agent|"
+    r"(?:us|u\.s\.|federal)\s*tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer)|"
+    r"tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer).{0,30}(?:us|u\.s\.|federal)|"
+    r"tax\s*prepar(?:er|ation)|tax\s*compliance|tax\s*review(?:er|ing)|"
+    r"tax\s*return\s*prepar|cpa\s*(?:us\s*)?tax|tax\s*cpa"
+    r")\b",
     re.IGNORECASE,
 )
 
@@ -150,7 +168,7 @@ def is_us_tax_job(job):
         return True
 
     matched = _keyword_hits(blob, US_TAX_KEYWORDS)
-    if len(matched) >= 2:
+    if len(matched) >= 1:
         print(f"DEBUG: '{job.get('title')}' @ {job.get('company')} matched: {matched}")
         return True
     return False
