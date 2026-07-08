@@ -28,29 +28,39 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          for repo in bot-auto.yml; do
-            code=$(curl -s -o /tmp/out.txt -w "%{http_code}" -X POST               -H "Authorization: Bearer ${GH_TOKEN}"               -H "Accept: application/vnd.github+json"               "https://api.github.com/repos/pav715/ustax-jobs-bot/actions/workflows/bot-auto.yml/dispatches"               -d '{"ref":"main"}')
-            echo "Tax HTTP ${code}"
-            cat /tmp/out.txt || true
-            [ "${code}" = "204" ] || exit 1
-          done
+          code=$(curl -s -o /tmp/tax.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pav715/ustax-jobs-bot/actions/workflows/bot-auto.yml/dispatches" \
+            -d '{"ref":"main"}')
+          echo "Tax HTTP ${code}"
+          cat /tmp/tax.txt || true
+          [ "${code}" = "204" ] || exit 1
 
       - name: Dispatch Testing bot
         if: steps.gate.outputs.run == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CRON_TRIGGER_PAT }}
         run: |
-          code=$(curl -s -o /tmp/out.txt -w "%{http_code}" -X POST             -H "Authorization: Bearer ${GH_TOKEN}"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/pav715/ustax-software-testing-bot/actions/workflows/bot-auto.yml/dispatches"             -d '{"ref":"main"}')
+          code=$(curl -s -o /tmp/test.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pav715/ustax-software-testing-bot/actions/workflows/bot-auto.yml/dispatches" \
+            -d '{"ref":"main"}')
           echo "Testing HTTP ${code}"
-          cat /tmp/out.txt || true
+          cat /tmp/test.txt || true
           [ "${code}" = "204" ] || exit 1
 
       - name: Dispatch Mortgage bot
         if: steps.gate.outputs.run == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.CRON_TRIGGER_PAT }}
         run: |
-          code=$(curl -s -o /tmp/out.txt -w "%{http_code}" -X POST             -H "Authorization: Bearer ${GH_TOKEN}"             -H "Accept: application/vnd.github+json"             "https://api.github.com/repos/pav715/ustax-mortgage-jobs-bot/actions/workflows/bot-auto.yml/dispatches"             -d '{"ref":"main"}')
+          code=$(curl -s -o /tmp/mtg.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pav715/ustax-mortgage-jobs-bot/actions/workflows/bot-auto.yml/dispatches" \
+            -d '{"ref":"main"}')
           echo "Mortgage HTTP ${code}"
-          cat /tmp/out.txt || true
+          cat /tmp/mtg.txt || true
           [ "${code}" = "204" ] || exit 1
