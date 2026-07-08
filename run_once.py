@@ -66,6 +66,12 @@ BLOCKLIST = re.compile(
 )
 
 # STRICT: Reject all Indian tax roles - no US Tax jobs should have these keywords
+# Title must contain US Tax (e.g. "US Tax Analyst", "Senior US Tax Associate")
+US_TAX_TITLE = re.compile(
+    r"\b(u\.?\s*s\.?\s*tax(?:ation)?|us\s*tax(?:ation)?)\b",
+    re.IGNORECASE,
+)
+
 INDIAN_TAX_BLOCKLIST = re.compile(
     r"\b("
     # GST Related (1-10)
@@ -128,7 +134,7 @@ def is_india_location(job):
 
 
 def is_us_tax_job(job):
-    """Accept if 2+ US-tax keywords in title/company/description and not blocklisted."""
+    """Accept US Tax titled roles, or 2+ US-tax keywords in full text. Reject blocklisted."""
     desc = (job.get("description") or "").lower()
     title = (job.get("title") or "").lower()
     company = (job.get("company") or "").lower()
@@ -139,10 +145,15 @@ def is_us_tax_job(job):
     if INDIAN_TAX_BLOCKLIST.search(blob):
         return False
 
+    if US_TAX_TITLE.search(title):
+        print(f"DEBUG: '{job.get('title')}' @ {job.get('company')} matched: us tax title")
+        return True
+
     matched = _keyword_hits(blob, US_TAX_KEYWORDS)
     if len(matched) >= 2:
         print(f"DEBUG: '{job.get('title')}' @ {job.get('company')} matched: {matched}")
-    return len(matched) >= 2
+        return True
+    return False
 
 
 def _mark_run_complete(state):
