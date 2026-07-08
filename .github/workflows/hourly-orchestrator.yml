@@ -1,0 +1,63 @@
+name: Hourly Orchestrator
+
+# Triggered by cron-job.org every hour 8AM-11PM IST. Dispatches all 3 bots.
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch-all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: IST active window
+        id: gate
+        run: |
+          H=$(TZ=Asia/Kolkata date +%-H)
+          echo "IST hour: $H"
+          if [ "$H" -lt 8 ] || [ "$H" -gt 23 ]; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Dispatch Tax bot
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          code=$(curl -s -o /tmp/tax.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/pav715/ustax-jobs-bot/actions/workflows/bot-auto.yml/dispatches" \
+            -d '{"ref":"main"}')
+          echo "Tax HTTP ${code}"
+          [ "${code}" = "204" ] || exit 1
+
+      - name: Dispatch Testing bot
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_TESTING_PAT }}
+        run: |
+          code=$(curl -s -o /tmp/test.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/jowaxa2041/ustax-software-testing-bot/actions/workflows/bot-auto.yml/dispatches" \
+            -d '{"ref":"main"}')
+          echo "Testing HTTP ${code}"
+          [ "${code}" = "204" ] || exit 1
+
+      - name: Dispatch Mortgage bot
+        if: steps.gate.outputs.run == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.DISPATCH_MORTGAGE_PAT }}
+        run: |
+          code=$(curl -s -o /tmp/mtg.txt -w "%{http_code}" -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/niwilis317/ustax-mortgage-telegram-bot/actions/workflows/bot-auto.yml/dispatches" \
+            -d '{"ref":"main"}')
+          echo "Mortgage HTTP ${code}"
+          [ "${code}" = "204" ] || exit 1
