@@ -20,17 +20,23 @@ STATE_FILE = "bot_state.json"
 
 US_TAX_KEYWORDS = [
     "us tax", "us taxation", "u.s. tax", "federal tax", "international tax",
+    "cross border tax", "cross-border tax", "expat tax", "us expat",
     "form 1040", "form 1041", "form 1120", "form 1065", "form 990", "form 5500",
-    "w-2", "1099", "schedule k-1", "schedule c", "schedule e",
+    "form 1120s", "form 1065", "schedule k-1", "schedule c", "schedule e", "schedule d",
+    "w-2", "1099", "1099-r", "1099-int", "1099-div", "1099-misc",
     "irs", "dor", "tax preparation", "tax preparer", "tax return", "tax filing",
     "tax review", "tax reviewer", "tax compliance", "tax analyst", "tax associate",
-    "tax consultant", "tax manager", "tax specialist", "tax advisor",
-    "lacerte", "proseries", "ultratax", "drake tax", "cch axcess", "atx",
-    "intuit", "turbotax", "h&r block", "enrolled agent", "cpa",
-    "state tax", "multi-state", "state and local", "salt",
+    "tax consultant", "tax manager", "tax specialist", "tax advisor", "tax senior",
+    "tax lead", "tax director", "tax executive", "tax preparer", "tax return preparer",
+    "lacerte", "proseries", "ultratax", "drake tax", "cch axcess", "atx", "gosystem",
+    "intuit", "turbotax", "h&r block", "enrolled agent", "cpa", "cpa tax",
+    "state tax", "multi-state", "multi state", "state and local", "salt",
     "partnership tax", "corporate tax", "individual tax", "s corp", "c corp",
-    "estate tax", "gift tax", "trust tax", "fiduciary",
-    "tax provision", "asc 740", "transfer pricing us",
+    "estate tax", "gift tax", "trust tax", "fiduciary", "nonprofit tax",
+    "tax provision", "asc 740", "transfer pricing us", "us transfer pricing",
+    "withholding tax", "payroll tax us", "sales tax us", "use tax",
+    "tax technology", "tax software", "tax operations", "tax support",
+    "remote tax", "virtual tax", "outsourced tax", "kpmg tax", "ey tax", "pwc tax", "deloitte tax",
 ]
 
 INDIA_LOCATION_KEYWORDS = [
@@ -79,13 +85,15 @@ BLOCKLIST = re.compile(
 US_TAX_TITLE = re.compile(
     r"\b("
     r"u\.?\s*s\.?\s*tax(?:ation)?|us\s*tax(?:ation)?|"
-    r"federal\s*tax|international\s*tax|cross[\s-]*border\s*tax|"
-    r"us\s*corporate\s*tax|us\s*individual\s*tax|"
+    r"federal\s*tax|international\s*tax|cross[\s-]*border\s*tax|expat\s*tax|"
+    r"us\s*corporate\s*tax|us\s*individual\s*tax|partnership\s*tax|"
     r"enrolled\s*agent|"
-    r"(?:us|u\.s\.|federal)\s*tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer)|"
-    r"tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer).{0,30}(?:us|u\.s\.|federal)|"
+    r"(?:us|u\.s\.|federal)\s*tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer|director|executive)|"
+    r"tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer|director|executive).{0,30}(?:us|u\.s\.|federal|international|expat)|"
     r"tax\s*prepar(?:er|ation)|tax\s*compliance|tax\s*review(?:er|ing)|"
-    r"tax\s*return\s*prepar|cpa\s*(?:us\s*)?tax|tax\s*cpa"
+    r"tax\s*return\s*prepar|cpa\s*(?:us\s*)?tax|tax\s*cpa|"
+    r"lacerte|proseries|ultratax|drake\s*tax|h\s*&\s*r\s*block|"
+    r"state\s*(?:and\s*)?local\s*tax|multi[\s-]*state\s*tax|salt\s*tax"
     r")\b",
     re.IGNORECASE,
 )
@@ -151,21 +159,40 @@ def is_india_location(job):
     return False
 
 
+def _passes_early_filter(title, company, role_title_pattern):
+    title_l = (title or "").lower()
+    company_l = (company or "").lower()
+    if INDIAN_TAX_BLOCKLIST.search(title_l) or INDIAN_TAX_BLOCKLIST.search(company_l):
+        return False
+    if role_title_pattern.search(title_l):
+        if BLOCKLIST.search(title_l) or BLOCKLIST.search(company_l):
+            return False
+        return True
+    if BLOCKLIST.search(title_l) or BLOCKLIST.search(company_l):
+        return False
+    return True
+
+
 def is_us_tax_job(job):
-    """Accept US Tax titled roles, or 2+ US-tax keywords in full text. Reject blocklisted."""
+    """Accept US Tax titled roles first; then keyword match in full text."""
     desc = (job.get("description") or "").lower()
     title = (job.get("title") or "").lower()
     company = (job.get("company") or "").lower()
     blob = f"{title} {company} {desc}"
 
+    if INDIAN_TAX_BLOCKLIST.search(title) or INDIAN_TAX_BLOCKLIST.search(company):
+        return False
+
+    if US_TAX_TITLE.search(title):
+        if BLOCKLIST.search(title) or BLOCKLIST.search(company):
+            return False
+        print(f"DEBUG: '{job.get('title')}' @ {job.get('company')} matched: us tax title")
+        return True
+
     if BLOCKLIST.search(blob):
         return False
     if INDIAN_TAX_BLOCKLIST.search(blob):
         return False
-
-    if US_TAX_TITLE.search(title):
-        print(f"DEBUG: '{job.get('title')}' @ {job.get('company')} matched: us tax title")
-        return True
 
     matched = _keyword_hits(blob, US_TAX_KEYWORDS)
     if len(matched) >= 1:
@@ -423,11 +450,7 @@ def main():
 
     us_tax_jobs = []
     for job in india_jobs:
-        title = (job.get("title") or "").lower()
-        company = (job.get("company") or "").lower()
-        if BLOCKLIST.search(title) or BLOCKLIST.search(company):
-            continue
-        if INDIAN_TAX_BLOCKLIST.search(title) or INDIAN_TAX_BLOCKLIST.search(company):
+        if not _passes_early_filter(job.get("title"), job.get("company"), US_TAX_TITLE):
             continue
         job = enrich_job(job)
         if is_us_tax_job(job):
