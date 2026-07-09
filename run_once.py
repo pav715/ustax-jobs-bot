@@ -19,24 +19,50 @@ STATS_FILE = "stats.json"
 STATE_FILE = "bot_state.json"
 
 US_TAX_KEYWORDS = [
-    "us tax", "us taxation", "u.s. tax", "federal tax", "international tax",
-    "cross border tax", "cross-border tax", "expat tax", "us expat",
-    "form 1040", "form 1041", "form 1120", "form 1065", "form 990", "form 5500",
-    "form 1120s", "form 1065", "schedule k-1", "schedule c", "schedule e", "schedule d",
-    "w-2", "1099", "1099-r", "1099-int", "1099-div", "1099-misc",
-    "irs", "dor", "tax preparation", "tax preparer", "tax return", "tax filing",
-    "tax review", "tax reviewer", "tax compliance", "tax analyst", "tax associate",
-    "tax consultant", "tax manager", "tax specialist", "tax advisor", "tax senior",
-    "tax lead", "tax director", "tax executive", "tax preparer", "tax return preparer",
-    "lacerte", "proseries", "ultratax", "drake tax", "cch axcess", "atx", "gosystem",
-    "intuit", "turbotax", "h&r block", "enrolled agent", "cpa", "cpa tax",
-    "state tax", "multi-state", "multi state", "state and local", "salt",
-    "partnership tax", "corporate tax", "individual tax", "s corp", "c corp",
-    "estate tax", "gift tax", "trust tax", "fiduciary", "nonprofit tax",
-    "tax provision", "asc 740", "transfer pricing us", "us transfer pricing",
-    "withholding tax", "payroll tax us", "sales tax us", "use tax",
-    "tax technology", "tax software", "tax operations", "tax support",
-    "remote tax", "virtual tax", "outsourced tax", "kpmg tax", "ey tax", "pwc tax", "deloitte tax",
+    # Tax Forms (1–25)
+    "form 1040", "form 1040nr", "form 1040sr", "form 1041", "form 1120", "form 1120s",
+    "form 1065", "form 990", "form 1099", "w-2", "w-4", "schedule a", "schedule b",
+    "schedule c", "schedule d", "schedule e", "schedule f", "schedule k-1", "schedule se",
+    "form 2441", "form 8863", "form 8949", "form 1098", "form 1095", "1040 preparation",
+    # IRS / Regulatory (26–40)
+    "irs", "irs guidelines", "irs regulations", "irs compliance", "department of revenue",
+    "dor", "federal tax", "state tax", "tax compliance", "tax law", "tax code",
+    "tax reform", "tax withholding", "tax liability", "tax deductions",
+    # Preparation Process (41–55)
+    "tax preparation", "tax return preparation", "tax filing", "tax review", "tax reviewer",
+    "tax return review", "quality review", "tax advisory", "client returns", "tax planning",
+    "tax research", "tax compliance review", "return review", "tax processing", "tax engagement",
+    # Tax Software (56–70)
+    "lacerte", "proseries", "gosystem", "onesource", "ultratax", "cch axcess",
+    "prosystem fx", "drake", "atx", "taxwise", "taxact", "taxslayer", "proconnect",
+    "crosslink", "h&r block",
+    # Entity Types (71–80)
+    "individual tax", "corporate tax", "partnership tax", "s-corporation", "fiduciary tax",
+    "non-resident tax", "trust tax", "estate tax", "exempt organization", "self-employed tax",
+    # Income Types (81–90)
+    "w-2 income", "1099 income", "rental income", "business income", "capital gains",
+    "dividend income", "interest income", "self-employment income", "foreign income", "passive income",
+    # Skills/Process (91–100)
+    "regulatory compliance", "multi-state filing", "federal compliance", "state compliance",
+    "tax deadline", "tax documentation", "client interaction", "tax strategy", "tax accuracy",
+    # Title keywords (Top 50 roles)
+    "us tax preparer", "tax preparer", "senior tax preparer", "individual tax preparer",
+    "tax return preparer", "tax preparation specialist", "tax filing specialist",
+    "tax preparation analyst", "tax return specialist", "federal tax preparer",
+    "tax analyst", "us tax analyst", "senior tax analyst", "tax compliance analyst",
+    "us tax compliance analyst", "federal tax analyst", "state tax analyst",
+    "tax research analyst", "tax technical analyst", "tax operations analyst",
+    "tax reviewer", "senior tax reviewer", "tax review analyst", "tax quality reviewer",
+    "tax return reviewer", "tax compliance reviewer", "tax audit reviewer",
+    "tax technical reviewer", "qa associate us tax forms", "tax senior reviewer",
+    "tax associate", "senior tax associate", "tax staff associate", "us tax associate",
+    "tax associate analyst", "tax associate consultant", "tax associate specialist",
+    "junior tax associate", "tax process associate", "tax compliance associate",
+    "tax consultant", "us tax consultant", "senior tax consultant", "tax advisory consultant",
+    "tax compliance consultant", "tax technology consultant", "tax planning consultant",
+    "tax transformation consultant", "tax digital consultant", "tax process consultant",
+    # US Tax context
+    "us tax", "us taxation", "u.s. tax", "enrolled agent", "cpa tax",
 ]
 
 INDIA_LOCATION_KEYWORDS = [
@@ -84,16 +110,29 @@ BLOCKLIST = re.compile(
 # Title match — US Tax roles (primary accept rule)
 US_TAX_TITLE = re.compile(
     r"\b("
+    # Preparer (1–10)
+    r"(?:us|u\.s\.|federal|individual|senior)\s*tax\s*prepar(?:er|ation)|"
+    r"tax\s*prepar(?:er|ation)|tax\s*return\s*prepar(?:er|ation)?|"
+    r"tax\s*filing\s*specialist|tax\s*preparation\s*(?:specialist|analyst)|"
+    r"tax\s*return\s*specialist|"
+    # Analyst (11–20)
+    r"(?:us|u\.s\.|federal|state|senior)\s*tax\s*analyst|"
+    r"tax\s*(?:compliance|research|technical|operations)\s*analyst|"
+    r"tax\s*analyst|"
+    # Reviewer (21–30)
+    r"(?:senior|quality|return|compliance|audit|technical)?\s*tax\s*review(?:er|ing)?|"
+    r"tax\s*review\s*analyst|tax\s*senior\s*reviewer|"
+    r"qa\s*associate.{0,20}(?:us\s*)?tax\s*forms|"
+    # Associate (31–40)
+    r"(?:us|u\.s\.|senior|junior|staff|process|compliance)\s*tax\s*associate|"
+    r"tax\s*associate(?:\s*(?:analyst|consultant|specialist))?|"
+    # Consultant (41–50)
+    r"(?:us|u\.s\.|senior)\s*tax\s*consultant|"
+    r"tax\s*(?:advisory|compliance|technology|planning|transformation|digital|process)\s*consultant|"
+    r"tax\s*consultant|"
+    # US Tax general
     r"u\.?\s*s\.?\s*tax(?:ation)?|us\s*tax(?:ation)?|"
-    r"federal\s*tax|international\s*tax|cross[\s-]*border\s*tax|expat\s*tax|"
-    r"us\s*corporate\s*tax|us\s*individual\s*tax|partnership\s*tax|"
-    r"enrolled\s*agent|"
-    r"(?:us|u\.s\.|federal)\s*tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer|director|executive)|"
-    r"tax\s*(?:analyst|associate|consultant|manager|senior|lead|specialist|advisor|preparer|reviewer|director|executive).{0,30}(?:us|u\.s\.|federal|international|expat)|"
-    r"tax\s*prepar(?:er|ation)|tax\s*compliance|tax\s*review(?:er|ing)|"
-    r"tax\s*return\s*prepar|cpa\s*(?:us\s*)?tax|tax\s*cpa|"
-    r"lacerte|proseries|ultratax|drake\s*tax|h\s*&\s*r\s*block|"
-    r"state\s*(?:and\s*)?local\s*tax|multi[\s-]*state\s*tax|salt\s*tax"
+    r"enrolled\s*agent|cpa\s*(?:us\s*)?tax|tax\s*cpa"
     r")\b",
     re.IGNORECASE,
 )
