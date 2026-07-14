@@ -183,8 +183,10 @@ def _keyword_hits(text, keywords):
 
 def is_india_location(job):
     """Return True only for India on-site or India-tied remote jobs."""
-    loc = (job.get("location") or "").lower()
+    loc = (job.get("location") or job.get("search_location") or "").lower()
     title = (job.get("title") or "").lower()
+    if not loc.strip():
+        return True
 
     if any(kw in loc for kw in FOREIGN_LOCATION_KEYWORDS):
         return False
@@ -213,6 +215,17 @@ def _passes_early_filter(title, company, role_title_pattern):
     return True
 
 
+def _title_matches_search(title, keyword):
+    if not title or not keyword:
+        return False
+    tl = title.lower()
+    words = [w for w in re.findall(r"[a-z]+", keyword.lower()) if len(w) > 3]
+    if not words:
+        return False
+    hits = sum(1 for w in words if w in tl)
+    return hits >= max(1, (len(words) + 1) // 2)
+
+
 def is_us_tax_job(job):
     """Accept US Tax titled roles first; then keyword match in full text."""
     desc = (job.get("description") or "").lower()
@@ -222,6 +235,13 @@ def is_us_tax_job(job):
 
     if INDIAN_TAX_BLOCKLIST.search(title) or INDIAN_TAX_BLOCKLIST.search(company):
         return False
+
+    sk = (job.get("search_keyword") or "")
+    if sk and "tax" in sk.lower() and re.search(r"\btax\b", title):
+        if not BLOCKLIST.search(title) and not INDIAN_TAX_BLOCKLIST.search(blob):
+            if _title_matches_search(title, sk) or US_TAX_TITLE.search(title):
+                print(f"DEBUG: '{job.get('title')}' @ {job.get('company')} matched: search keyword + tax")
+                return True
 
     if US_TAX_TITLE.search(title):
         if BLOCKLIST.search(title) or BLOCKLIST.search(company):
