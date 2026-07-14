@@ -201,18 +201,23 @@ def is_india_location(job):
     return False
 
 
-def _passes_early_filter(title, company, role_title_pattern):
-    title_l = (title or "").lower()
-    company_l = (company or "").lower()
+def _passes_early_filter(job, role_title_pattern):
+    title = job.get("title") or ""
+    company = job.get("company") or ""
+    sk = job.get("search_keyword") or ""
+    title_l = title.lower()
+    company_l = company.lower()
     if INDIAN_TAX_BLOCKLIST.search(title_l) or INDIAN_TAX_BLOCKLIST.search(company_l):
         return False
-    if role_title_pattern.search(title_l):
-        if BLOCKLIST.search(title_l) or BLOCKLIST.search(company_l):
-            return False
-        return True
     if BLOCKLIST.search(title_l) or BLOCKLIST.search(company_l):
         return False
-    return True
+    if re.search(r"\btax\b", title_l):
+        return True
+    if sk and _title_matches_search(title, sk):
+        return True
+    if role_title_pattern.search(title_l):
+        return True
+    return False
 
 
 def _title_matches_search(title, keyword):
@@ -410,7 +415,7 @@ def handle_commands(state, stats):
 
 def enrich_job(job):
     """Fetch full job description from LinkedIn detail page."""
-    if job.get("description") and len(job["description"]) > 300:
+    if job.get("description") and len(job["description"]) > 200:
         return job
     url = job.get("url", "")
     fetched = False
@@ -477,22 +482,9 @@ def main():
         log("Bot is PAUSED. Send /resume to restart.")
         return
 
-    # Calculate time window: only fetch jobs since last run (+ 5 min buffer)
-    last_run = state.get("last_run_at", "")
-    if last_run:
-        try:
-            last_dt = datetime.fromisoformat(last_run)
-            elapsed = (datetime.utcnow() - last_dt).total_seconds()
-            since_seconds = int(elapsed) + 300  # add 5 min buffer
-        except Exception:
-            since_seconds = 2400  # fallback: 40 minutes
-    else:
-        since_seconds = 2400  # first run: 40 minutes
-
-    # Cap: minimum 30 min, maximum 2 hours
-    since_seconds = max(1800, min(since_seconds, 7200))
-
-    log(f"Fetch window: {since_seconds // 60} minutes")
+    # 24h scrape window — niche jobs rarely repost hourly; seen_jobs handles dedupe
+    since_seconds = getattr(config, "SCRAPE_WINDOW_SECONDS", 86400)
+    log(f"Fetch window: {since_seconds // 3600} hours")
 
     seen = load_seen()
     log(f"Loaded {len(seen)} previously seen jobs.")
@@ -520,7 +512,7 @@ def main():
 
     us_tax_jobs = []
     for job in india_jobs:
-        if not _passes_early_filter(job.get("title"), job.get("company"), US_TAX_TITLE):
+        if not _passes_early_filter(job, US_TAX_TITLE):
             continue
         job = enrich_job(job)
         if is_us_tax_job(job):
