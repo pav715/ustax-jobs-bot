@@ -511,12 +511,22 @@ def main():
     log(f"India/Remote: {len(india_jobs)} out of {len(jobs)} total.")
 
     us_tax_jobs = []
+    enrich_budget = getattr(config, "MAX_ENRICH_PER_CYCLE", 30)
+    enriched = 0
     for job in india_jobs:
         if not _passes_early_filter(job, US_TAX_TITLE):
             continue
-        job = enrich_job(job)
         if is_us_tax_job(job):
             us_tax_jobs.append(job)
+            continue
+        if enriched >= enrich_budget:
+            continue
+        job = enrich_job(job)
+        enriched += 1
+        if is_us_tax_job(job):
+            us_tax_jobs.append(job)
+
+    log(f"Enriched {enriched} jobs (budget {enrich_budget})")
 
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(india_jobs)} India jobs.")
 
