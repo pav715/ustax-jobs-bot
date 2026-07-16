@@ -79,7 +79,25 @@ LOCATIONS = [
 
 MAX_JOBS_PER_CYCLE = 15
 LINKEDIN_KEYWORD_LIMIT = 40
-LINKEDIN_LOCATION_LIMIT = 6
+LINKEDIN_LOCATION_LIMIT = 10
 SCRAPE_WINDOW_SECONDS = 86400  # 24h — LinkedIn 1h window returns 0 jobs for niche roles
-MAX_ENRICH_PER_CYCLE = 30
+MAX_ENRICH_PER_CYCLE = 50
 CHECK_INTERVAL_LABEL = "1 hour"
+
+PRIORITY_KEYWORDS = [
+    "US Tax Preparer",
+    "Tax Preparer",
+    "Senior Tax Preparer",
+    "Tax Analyst",
+    "US Tax Analyst",
+    "Senior Tax Analyst",
+    "Tax Associate",
+    "US Tax Associate",
+    "Tax Consultant",
+    "Tax Reviewer",
+    "Tax Compliance Analyst",
+    "Federal Tax Preparer",
+    "Tax Return Preparer",
+    "Tax Operations Analyst",
+    "Senior Tax Associate",
+]
