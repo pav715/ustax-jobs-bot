@@ -1,12 +1,12 @@
 {
-  "scraped": 201,
-  "india": 201,
-  "matched": 44,
-  "new": 15,
-  "sent": 15,
+  "scraped": 360,
+  "india": 360,
+  "matched": 65,
+  "new": 0,
+  "sent": 0,
   "seen_total": 273,
-  "fresh_today": 42,
+  "fresh_today": 0,
   "telegram_ok": true,
   "telegram_detail": "getMe=200 getChat=200 {\"ok\":true,\"result\":{\"id\":-1003570586532,\"title\":\"US Tax Jobs information \\ud83c",
-  "at": "2026-09-21T15:37:36.568682"
+  "at": "2026-09-21T23:55:23.677791"
 }
