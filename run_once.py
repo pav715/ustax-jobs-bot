@@ -164,9 +164,9 @@ US_TAX_TITLE = re.compile(
 
 INDIAN_TAX_BLOCKLIST = re.compile(
     r"\b("
-    # GST Related (1-10)
-    r"gst\s*analyst|gst\s*compliance|gst\s*executive|gst\s*specialist|gst\s*manager|"
-    r"gst\s*consultant|gst\s*filing|gst\s*returns|gst\s*audit|gst\s*advisory|"
+    # GST Related (1-10) — includes bare "gst" now
+    r"gst|gst\s*analyst|gst\s*compliance|gst\s*executive|gst\s*specialist|gst\s*manager|"
+    r"gst\s*consultant|gst\s*filing|gst\s*returns|gst\s*audit|gst\s*advisory|gstin|"
     # Income Tax India (11-20)
     r"income\s*tax\s*analyst|income\s*tax\s*consultant|income\s*tax\s*executive|"
     r"direct\s*tax\s*analyst|direct\s*tax\s*consultant|direct\s*tax\s*manager|"
@@ -180,13 +180,16 @@ INDIAN_TAX_BLOCKLIST = re.compile(
     # Other Indian Tax (46-50)
     r"tax\s*auditor|tax\s*litigation\s*specialist|transfer\s*pricing|"
     r"tax\s*compliance\s*executive|statutory\s*compliance|"
+    # Indian payroll / statutory terms not tax-titled but India-only context
+    r"provident\s*fund|\bpf\s*(?:compliance|filing|deduction|withdrawal)|\besi\b|epfo|"
+    r"professional\s*tax|labour\s*welfare\s*fund|"
     # Keywords that indicate Indian context
     r"itr|itr-1|itr-2|itr-3|itr-4|itr-5|itr-6|itr-7|"
     r"form\s*16|form\s*16a|form\s*24q|"
-    r"pan\s*number|aadhar|aadhaar|cin|gstin|"
+    r"pan\s*number|aadhar|aadhaar|\bcin\b|"
     r"goods\s*and\s*services\s*tax|section\s*80|fy20[0-9]{2}|ay20[0-9]{2}|"
     r"tds|tcs|advance\s*tax|challan|saral|"
-    r"indian\s*tax|india\s*tax|ato"
+    r"indian\s*tax|india\s*tax"
     r")\b",
     re.IGNORECASE,
 )
@@ -268,6 +271,7 @@ def _passes_early_filter(job, role_title_pattern):
 
 
 def _title_matches_search(title, keyword):
+    """Require the domain word AND at least one other substantive keyword word in the title."""
     if not title or not keyword:
         return False
     tl = title.lower()
@@ -276,10 +280,15 @@ def _title_matches_search(title, keyword):
         "mortgage", "loan", "credit", "tax", "servicing", "underwrit",
         "financial", "compliance", "testing", "software", "banking", "escrow",
     )
-    for d in domain_words:
-        if d in kw_l:
-            return d in tl
     words = [w for w in re.findall(r"[a-z]+", kw_l) if len(w) > 3]
+    matched_domain = next((d for d in domain_words if d in kw_l), None)
+    if matched_domain:
+        if matched_domain not in tl:
+            return False
+        other_words = [w for w in words if w not in matched_domain and matched_domain not in w]
+        if not other_words:
+            return True
+        return any(w in tl for w in other_words)
     return bool(words) and all(w in tl for w in words)
 
 
@@ -313,14 +322,20 @@ def is_us_tax_job(job):
     if INDIAN_TAX_BLOCKLIST.search(blob):
         return False
 
+    # Require the literal word "tax" plus at least 2 strong US-tax signals —
+    # prevents generic HR boilerplate ("regulatory compliance", "quality review")
+    # from passing on a single weak keyword hit with no real tax content.
+    if not re.search(r"\btax\b", blob):
+        return False
     matched = _keyword_hits(blob, US_TAX_KEYWORDS)
-    if len(matched) >= 1:
+    if len(matched) >= 2:
         print(f"DEBUG: '{job.get('title')}' @ {job.get('company')} matched: {matched}")
         return True
     return False
 
 
 def _mark_run_complete(state):
+    state["last_run_at_ist"] = _ist_now().isoformat()
     state["last_run_at"] = datetime.utcnow().isoformat()
     save_state(state)
 
@@ -357,22 +372,31 @@ def _job_posted_ist(job):
 
 def _cycle_cutoff_ist(state):
     """Jobs must be posted after last successful run (≈ last hour)."""
-    last = (state.get("last_run_at") or "").strip()
     now = _ist_now()
-    if last:
+    last_ist = (state.get("last_run_at_ist") or "").strip()
+    if last_ist:
         try:
-            return datetime.fromisoformat(last[:19]) + IST
+            return datetime.fromisoformat(last_ist[:19])
+        except Exception:
+            pass
+    # Backward-compat: old state files only stored last_run_at as raw UTC.
+    last_utc = (state.get("last_run_at") or "").strip()
+    if last_utc:
+        try:
+            return datetime.fromisoformat(last_utc[:19]) + IST
         except Exception:
             pass
     return now - timedelta(hours=1)
 
 
 def _passes_post_window(job, cutoff_ist=None):
-    """Today (IST) only — seen_jobs dedupe prevents repeat posts."""
+    """Job posted after last successful run (cutoff)."""
+    if not cutoff_ist:
+        cutoff_ist = _ist_now() - timedelta(hours=1)
     dt = _job_posted_ist(job)
     if not dt:
         return False
-    return dt.date() == _ist_now().date()
+    return dt >= cutoff_ist
 
 
 def load_state():
@@ -581,9 +605,11 @@ def main():
         log("Bot is PAUSED. Send /resume to restart.")
         return
 
-    # 24h scrape window — niche jobs rarely repost hourly; seen_jobs handles dedupe
-    since_seconds = getattr(config, "SCRAPE_WINDOW_SECONDS", 86400)
-    log(f"Fetch window: {since_seconds // 3600} hours")
+    # Dynamic scrape window: fetch only jobs since last successful run (approx. 1 hour for hourly runs)
+    cutoff_ist = _cycle_cutoff_ist(state)
+    now_ist = _ist_now()
+    since_seconds = max(300, int((now_ist - cutoff_ist).total_seconds()))  # min 5 min
+    log(f"Fetch window: {since_seconds}s ({since_seconds // 60}m) — since last run at {cutoff_ist.strftime('%H:%M IST')}")
 
     seen = load_seen()
     log(f"Loaded {len(seen)} previously seen jobs.")
@@ -630,9 +656,9 @@ def main():
     log(f"US Tax relevant: {len(us_tax_jobs)} out of {len(india_jobs)} India jobs.")
 
     cutoff_ist = _cycle_cutoff_ist(state)
-    log(f"Post window: today IST only (cutoff ref {cutoff_ist.strftime('%Y-%m-%d %H:%M IST')})")
-    fresh_jobs = [j for j in us_tax_jobs if _passes_post_window(j)]
-    log(f"Posted today: {len(fresh_jobs)} (from {len(us_tax_jobs)} matched)")
+    log(f"Post window: since last run at {cutoff_ist.strftime('%Y-%m-%d %H:%M IST')}")
+    fresh_jobs = [j for j in us_tax_jobs if _passes_post_window(j, cutoff_ist)]
+    log(f"Posted since cutoff: {len(fresh_jobs)} (from {len(us_tax_jobs)} matched)")
 
     new_jobs = [j for j in fresh_jobs if not _is_seen(j, seen)]
     new_jobs.sort(key=lambda j: str(j.get("posted") or j.get("fetched_at") or ""))
