@@ -63,18 +63,16 @@ KEYWORDS = [
 ]
 
 LOCATIONS = [
-    "Hyderabad",
-    "Bangalore",
-    "Chennai",
-    "Kochi",
-    "Visakhapatnam",
-    "Mumbai",
-    "Pune",
-    "Delhi",
-    "Noida",
-    "Gurgaon",
-    "Ahmedabad",
-    "Kolkata",
+    "United States",
+    "New York",
+    "California",
+    "Texas",
+    "Florida",
+    "Illinois",
+    "Pennsylvania",
+    "Ohio",
+    "Georgia",
+    "North Carolina",
 ]
 
 MAX_JOBS_PER_CYCLE = 15
