@@ -1,12 +1,12 @@
 {
-  "scraped": 277,
-  "india": 277,
-  "matched": 18,
+  "scraped": 247,
+  "india": 247,
+  "matched": 13,
   "new": 0,
   "sent": 0,
   "seen_total": 494,
   "fresh_today": 0,
-  "telegram_ok": false,
-  "telegram_detail": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))",
-  "at": "2026-11-04T10:19:31.638464"
+  "telegram_ok": true,
+  "telegram_detail": "getMe=200 getChat=200 {\"ok\":true,\"result\":{\"id\":-1003570586532,\"title\":\"US Tax Jobs information \\ud83c",
+  "at": "2026-11-04T21:13:10.027025"
 }
